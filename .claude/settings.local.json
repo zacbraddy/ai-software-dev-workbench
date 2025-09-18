@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "mcp__notion__fetch",
+      "mcp__notion__fetch",
+      "mcp__notion__search",
+      "Bash(npx vitest run:*)",
+      "Bash(pnpm test:*)",
+      "Bash(npx vitest list:*)",
+      "WebFetch(domain:storybook.js.org)",
+      "WebFetch(domain:vitest.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(pnpm list:*)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm format:check:*)",
+      "Bash(pnpm format:*)",
+      "Bash(cd:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(ls:*)",
+      "Bash(cd:*)",
+      "Bash(pnpm build:*)",
+      "Bash(grep:*)",
+      "WebSearch",
+      "Bash(fi)"
+    ],
+    "deny": []
+  }
+}
