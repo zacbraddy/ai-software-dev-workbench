@@ -23,7 +23,10 @@
       "Bash(pnpm build:*)",
       "Bash(grep:*)",
       "WebSearch",
-      "Bash(fi)"
+      "Bash(fi)",
+      "mcp__notion-subly__search",
+      "Bash(tree:*)",
+      "mcp__notion-subly__fetch"
     ],
     "deny": []
   }
