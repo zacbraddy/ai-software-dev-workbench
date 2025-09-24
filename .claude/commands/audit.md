@@ -1,6 +1,6 @@
 Audit a task after it has been implemented. Pass the argument of the Task ID to this command.
 
-**IMPORTANT**: Before you begin run the regex `/^T\d\d\d$/` against $ARGUMENTS. If it matches then continue,
+**IMPORTANT**: Before you begin run the regex `/^T\d\d\d([a-z])*$/` against $ARGUMENTS. If it matches then continue,
 if it does not then **stop the current audit process immediately** tell the user that they need to enter a 
 task number for the current feature which they would like to audit and then **DO NOT CONTINUE WITH THE AUDIT**.
 
@@ -8,6 +8,9 @@ The current feature can be determined by examining the current branch name.
 
 Using the current branch name you will be able to find the tasks.md that you need to look at. It will be in the path
 `specs/[BRANCH_NAME]/tasks.md`.
+
+**IMPORTANT** If you determine that the task that was implemented did not change any code i.e. it was just a documentation 
+change then you should skip the code quality and testing steps of the audit process
 
 Now execute the audit protocol for this task.
 

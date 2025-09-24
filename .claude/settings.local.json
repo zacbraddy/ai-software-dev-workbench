@@ -26,7 +26,11 @@
       "Bash(fi)",
       "mcp__notion-subly__search",
       "Bash(tree:*)",
-      "mcp__notion-subly__fetch"
+      "mcp__notion-subly__fetch",
+      "Bash(npm run lint)",
+      "SlashCommand(/audit:*)",
+      "Bash(find:*)",
+      "Bash(npm run docs:local:*)"
     ],
     "deny": []
   }
