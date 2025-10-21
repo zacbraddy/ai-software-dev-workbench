@@ -106,7 +106,7 @@ You are a technical QA engineer and product manager with deep expertise in devel
 
 ### Execution Steps:
 
-1. **Load Context**: Run `!speckit/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` and parse JSON to get `FEATURE_DIR` and `AVAILABLE_DOCS`
+1. **Load Context**: Run `bash speckit/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` and parse JSON to get `FEATURE_DIR` and `AVAILABLE_DOCS`
 
 2. **Read Required Files**:
    - `FEATURE_DIR/tasks.md` - Find the specific task
@@ -168,7 +168,7 @@ When auditing multiple tasks, spawn ONE subagent per task for efficient parallel
 
 ### Execution Steps:
 
-1. **Load Context**: Run `!speckit/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` and parse JSON to get `FEATURE_DIR` and `AVAILABLE_DOCS`
+1. **Load Context**: Run `bash speckit/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` and parse JSON to get `FEATURE_DIR` and `AVAILABLE_DOCS`
 
 2. **Read Tasks File**: Load `FEATURE_DIR/tasks.md` and extract all requested task IDs
 
