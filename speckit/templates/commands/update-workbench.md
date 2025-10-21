@@ -15,7 +15,7 @@ This command updates the ai-software-dev-workbench with:
 
 ```
 /update-workbench
-/update-workbench ../techsift
+/update-workbench ../other-project
 /update-workbench ../project1 ../project2
 ```
 
@@ -66,7 +66,7 @@ Present summary:
 - implement.md: Improved error handling
 - NEW: checklist.md command
 
-### From ../techsift
+### From ../other-project
 - audit-parallel.md: Enhanced fix selection syntax
 - NEW: Custom memory templates
 

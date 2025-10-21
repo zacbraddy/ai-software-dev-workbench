@@ -21,10 +21,10 @@ These templates are copied to your project's `memory/` directory during installa
 ## What Should NOT Go Here
 
 **Project-specific content** belongs in your project's memory folder:
-- TechSift's LinkedIn compliance rules
-- Specific tech stacks (React, SST, etc.)
-- Revenue targets
-- Customer names
+- Domain-specific compliance rules
+- Specific tech stacks (React, Vue, etc.)
+- Project targets and goals
+- Client/customer names
 - Business strategies
 
 ## Installation Process
