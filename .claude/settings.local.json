@@ -30,7 +30,8 @@
       "Bash(npm run lint)",
       "SlashCommand(/audit:*)",
       "Bash(find:*)",
-      "Bash(npm run docs:local:*)"
+      "Bash(npm run docs:local:*)",
+      "Bash(test:*)"
     ],
     "deny": []
   }
