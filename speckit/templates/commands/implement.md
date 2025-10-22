@@ -17,7 +17,6 @@ User input: $ARGUMENTS
 
 3. **Load context** (required for both modes):
    - Run `bash speckit/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks`
-   - 
    - Parse JSON output to extract:
      - `FEATURE_DIR` - Path to feature specification directory
      - `AVAILABLE_DOCS` - List of available documentation files
