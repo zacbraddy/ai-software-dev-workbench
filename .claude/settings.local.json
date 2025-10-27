@@ -31,7 +31,10 @@
       "SlashCommand(/audit:*)",
       "Bash(find:*)",
       "Bash(npm run docs:local:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm test:unit:*)",
+      "Bash(pnpm prettier:*)"
     ],
     "deny": []
   }
