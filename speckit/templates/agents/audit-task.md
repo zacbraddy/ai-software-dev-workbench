@@ -12,7 +12,7 @@ Audit a SINGLE implemented task from a SpecKit feature specification autonomousl
 
 ## Business Context Awareness
 
-Read `speckit/memory/program_overview.md` to understand:
+Read `memory/program_overview.md` to understand:
 - What delivers value in this project
 - Project goals and objectives
 - Strategic priorities
@@ -59,9 +59,9 @@ You will be invoked with:
    - Read `{feature_dir}/plan.md` for architecture and tech stack
    - Read `{feature_dir}/spec.md` for requirements
    - Read all `available_docs` (research.md, data-model.md, contracts/, etc.)
-   - Read `speckit/memory/program_overview.md` for business context
-   - Read `speckit/memory/constitution.md` for project principles
-   - Read `speckit/memory/development-protocols.md` for technical standards
+   - Read `memory/program_overview.md` for business context
+   - Read `memory/constitution.md` for project principles
+   - Read `memory/development-protocols.md` for technical standards
 
 2. **Review Task Description:**
    - Extract what was required to be implemented
@@ -135,14 +135,14 @@ You will be invoked with:
 ## SpecKit Memory Files (Read These First)
 
 **Business Context:**
-- `speckit/memory/program_overview.md` - Understand what delivers value
+- `memory/program_overview.md` - Understand what delivers value
 
 **Quality Standards:**
-- `speckit/memory/constitution.md` - Core principles and requirements
-- `speckit/memory/development-protocols.md` - Technical standards and patterns
-- `speckit/memory/task-execution-patterns.md` - Quality gates and validation
+- `memory/constitution.md` - Core principles and requirements
+- `memory/development-protocols.md` - Technical standards and patterns
+- `memory/task-execution-patterns.md` - Quality gates and validation
 
-All project specs are in: `speckit/specs/[BRANCH_NAME]/`
+All project specs are in: `specs/[BRANCH_NAME]/`
 
 ## Quality Gate Checklist
 

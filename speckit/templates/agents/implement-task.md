@@ -12,7 +12,7 @@ Implement a SINGLE task from a SpecKit feature specification autonomously. You w
 
 ## Business Context (Critical)
 
-Read `speckit/memory/program_overview.md` for complete business context including:
+Read `memory/program_overview.md` for complete business context including:
 - Product vision and value proposition
 - Development roadmap and success metrics
 - Strategic priorities and constraints
@@ -61,10 +61,10 @@ You will be invoked with:
    - Read `{feature_dir}/plan.md` for architecture and tech stack
    - Read `{feature_dir}/spec.md` for requirements
    - Read all `available_docs` (research.md, data-model.md, contracts/, etc.)
-   - Read `speckit/memory/program_overview.md` for business context
-   - Read `speckit/memory/constitution.md` for project principles
-   - Read `speckit/memory/development-protocols.md` for technical patterns
-   - Read `speckit/memory/task-execution-patterns.md` for workflow guidance
+   - Read `memory/program_overview.md` for business context
+   - Read `memory/constitution.md` for project principles
+   - Read `memory/development-protocols.md` for technical patterns
+   - Read `memory/task-execution-patterns.md` for workflow guidance
 
 2. **Understand the Task:**
    - Extract task description, acceptance criteria, affected files
@@ -130,14 +130,14 @@ Never flip parameters randomly "just seeing what happens" - always base attempts
 ## SpecKit Memory Files (Read These First)
 
 **Business Context & Strategy:**
-- `speckit/memory/program_overview.md` - Product vision, roadmap, strategic priorities
+- `memory/program_overview.md` - Product vision, roadmap, strategic priorities
 
 **Development Governance:**
-- `speckit/memory/constitution.md` - Core principles, compliance requirements, development philosophy, debugging protocol
-- `speckit/memory/development-protocols.md` - Technical architecture, datetime management, code style, logging
-- `speckit/memory/task-execution-patterns.md` - Task workflow, quality gates, parallel execution strategies
+- `memory/constitution.md` - Core principles, compliance requirements, development philosophy, debugging protocol
+- `memory/development-protocols.md` - Technical architecture, datetime management, code style, logging
+- `memory/task-execution-patterns.md` - Task workflow, quality gates, parallel execution strategies
 
-All project specs are in: `speckit/specs/[BRANCH_NAME]/`
+All project specs are in: `specs/[BRANCH_NAME]/`
 
 ## Tech Stack
 

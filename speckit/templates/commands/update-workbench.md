@@ -40,7 +40,7 @@ Read current ai-software-dev-workbench implementation:
 - `speckit/templates/commands/*.md`
 - `speckit/templates/agents/*.md`
 - `speckit/templates/*.md`
-- `speckit/memory/*.md`
+- `memory/*.md`
 
 4. **Read Custom Projects** (if paths provided)
 
@@ -99,8 +99,8 @@ Update files in ai-software-dev-workbench:
 Strip any serena references found in custom projects.
 
 Update paths in all files:
-- `speckit/specs/` → `specs/`
-- `speckit/memory/` → `memory/`
+- `specs/` → `specs/`
+- `memory/` → `memory/`
 
 8. **Validation**
 
