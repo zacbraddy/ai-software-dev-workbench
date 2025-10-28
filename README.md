@@ -53,7 +53,26 @@ git checkout -b 001-user-authentication
 /implement T002-T010  # Implement remaining tasks (parallel)
 /audit T001-T010      # Validate implementation quality
 /analyze              # Check spec/plan/tasks consistency
+/coalesce-knowledge   # Synthesize knowledge from CLAUDE.md (after spec complete)
 ```
+
+**Note on Knowledge Management During Development:**
+
+During spec implementation, you'll make architectural decisions, choose patterns, and set development directions. Rather than immediately updating memory files (which may change as development progresses), document these decisions temporarily in CLAUDE.md by asking Claude to add them there.
+
+This approach prevents premature decisions from becoming permanent:
+- Early decisions that later get reversed won't pollute memory files
+- Multiple direction changes during development don't cause documentation chaos
+- You can see all decisions in one place during active development
+
+Once the spec is complete (>90% tasks done), run `/coalesce-knowledge` to:
+- Review all accumulated decisions with hindsight
+- Promote stable patterns to permanent memory/skills
+- Discard development chaff and deprecated approaches
+- Extract detailed guides to documentation
+- Keep CLAUDE.md lean and focused
+
+**Mid-Spec Coalescing**: If CLAUDE.md grows too large (>800 lines) during development, you can run `/coalesce-knowledge` mid-spec. The command will mark knowledge as "provisional" so you can re-validate decisions when the spec completes.
 
 ## Features
 
@@ -195,6 +214,7 @@ Manage project context and updates:
 | Command | Purpose | When to Use |
 |---------|---------|-------------|
 | `/constitution` | Create/update project principles | Initial setup, major policy changes |
+| `/coalesce-knowledge` | Synthesize knowledge from CLAUDE.md | End of spec, CLAUDE.md warnings, >800 lines |
 | `/suggest` | Generate suggestion documents | Feature discovery, stakeholder alignment |
 | `/update-workbench` | Update from official spec-kit | Monthly maintenance, after improvements |
 
@@ -416,6 +436,142 @@ The update command:
 - Strips any experimental features (like serena references)
 - Updates paths to match workbench conventions
 
+## Knowledge Coalescing
+
+### `/coalesce-knowledge` - Synthesize Knowledge into Long-Term Storage
+
+**Purpose**: Coalesce knowledge from CLAUDE.md into appropriate long-term locations (memory files, skills, documentation) to prevent CLAUDE.md bloat and organize project knowledge effectively.
+
+**When to Use**:
+- CLAUDE.md exceeds ~800 lines or shows warnings
+- At end of major spec implementations (>90% tasks complete)
+- After significant architectural decisions accumulate
+- Mid-spec if CLAUDE.md becomes unmanageably large
+
+**Usage**:
+```bash
+/coalesce-knowledge
+```
+
+### First-Time Setup
+
+Before first use, configure your project's documentation structure:
+
+1. Run `./install.sh` (documentation template auto-injected into CLAUDE.md)
+2. Edit CLAUDE.md "## Documentation Structure" section
+3. Uncomment ONE option:
+   - **OPTION 1**: No documentation (memory/skills only)
+   - **OPTION 2**: Simple /docs/ folder
+   - **OPTION 3**: Docusaurus website
+   - **OPTION 4**: Custom documentation file
+4. Save and restart Claude Code
+5. Run `/coalesce-knowledge`
+
+### How It Works
+
+1. **Analyzes** CLAUDE.md for knowledge categorization opportunities
+2. **Detects** spec completion status (mid-spec vs end-of-spec modes)
+3. **Categorizes** knowledge into:
+   - Keep in CLAUDE.md (critical reference material)
+   - Move to memory/ (business/workflow knowledge)
+   - Move to skills/ (project-specific patterns)
+   - Extract to documentation (detailed guides >50 lines)
+   - Remove (deprecated/obsolete content)
+4. **Presents** interactive report with numbered items
+5. **Executes** approved actions automatically
+6. **Marks** mid-spec knowledge as provisional for future validation
+
+### Mid-Spec vs End-of-Spec Modes
+
+**Mid-Spec** (<90% tasks complete):
+- Adds provisional markers to coalesced knowledge
+- More conservative about what to establish as permanent
+- Allows end-of-spec cleanup to validate decisions
+- Example: `<!-- META: provisional=true spec=002 added=2025-10-28 -->`
+
+**End-of-Spec** (>90% tasks complete):
+- Coalesces knowledge as stable patterns
+- Adds "Established: YYYY-MM-DD" markers
+- Reviews and removes/validates provisional markers
+- Finalizes architectural decisions
+
+### Selection Syntax
+
+Similar to `/audit` command:
+
+```bash
+# Execute all proposed actions
+Implement: all
+
+# Execute specific categories
+Implement: A, B, D
+
+# Execute specific numbered items
+Implement: 1, 3, 5-7, 16
+
+# Execute all except excluded items
+Implement: all except 13, 20-22
+
+# Remove items from plan (not deferred, just skipped)
+Skip: 6, 14
+```
+
+### Deferred Items
+
+Items not selected for implementation are marked with `<!-- COALESCE_DEFER -->` tags in CLAUDE.md. Future runs will re-identify these and re-propose coalescing.
+
+**Important**: Always restart Claude Code after running `/coalesce-knowledge` to load updated memory files and skills.
+
+### Example Workflow
+
+```bash
+# Scenario: CLAUDE.md is 955 lines, showing warnings
+$ /coalesce-knowledge
+
+📊 Spec: 002-user-and-tenant (82.5% complete - MID-SPEC MODE)
+📄 CLAUDE.md: 955 lines (44KB) ⚠️ Warning threshold
+
+# Review report with 27 proposed actions...
+
+Implement: all except 16, 17  # Keep detailed examples in CLAUDE.md for now
+
+# Changes applied automatically
+✅ CLAUDE.md reduced to 680 lines
+✅ 5 sections moved to memory/
+✅ 2 skills updated
+
+⚠️  Restart Claude Code to load changes!
+```
+
+### Knowledge Categorization
+
+The command automatically categorizes knowledge based on:
+
+- **Keep in CLAUDE.md**: Critical gates, quick reference, recent patterns
+- **memory/constitution.md**: Core principles, compliance, non-negotiable rules
+- **memory/development-protocols.md**: Tech patterns, tool choices, architecture
+- **memory/task-execution-patterns.md**: Workflow, quality gates, debugging
+- **memory/program_overview.md**: Business context, customer info, vision
+- **.claude/skills/{project}/**: MCP integrations, project-specific patterns
+- **Documentation** (per your config): Detailed guides, examples, ADRs
+
+### Provisional Knowledge Tracking
+
+When running mid-spec, the command adds LLM-parseable markers:
+
+```markdown
+<!-- META: provisional=true spec=002-user-and-tenant added=2025-10-28 -->
+## Pattern Name
+[Content]
+<!-- /META -->
+```
+
+These markers allow the end-of-spec run to:
+- Find all provisional knowledge easily
+- Validate decisions are still correct
+- Remove markers for stable patterns
+- Update or remove changed decisions
+
 ## Advanced Usage
 
 ### Complete Feature Workflow Example
@@ -452,6 +608,67 @@ git checkout -b 001-user-authentication
 # 8. Final check
 /analyze
 # Ensures implementation matches spec
+
+# 9. Coalesce knowledge
+/coalesce-knowledge
+# Synthesizes architectural decisions from CLAUDE.md
+# Promotes stable patterns to memory/skills
+# Extracts detailed guides to documentation
+# Keeps CLAUDE.md lean for next feature
+```
+
+### Knowledge Management Workflow
+
+**During Spec Implementation** (T001 through T0XX):
+
+```bash
+# As you make decisions, document them temporarily in CLAUDE.md
+"Claude, please add this factory pattern decision to CLAUDE.md"
+"Claude, document that we removed InversifyJS in CLAUDE.md"
+"Claude, add the Middy + Powertools Lambda framework to CLAUDE.md"
+
+# CLAUDE.md grows with:
+# - Architecture decisions (may change during development)
+# - Pattern choices (may be refined as you learn)
+# - Framework selections (may be swapped if issues arise)
+# - Code style rules (may evolve with team feedback)
+```
+
+**Why This Approach Works:**
+- Decisions visible immediately for rest of spec implementation
+- No premature commitment to patterns that might change
+- Direction reversals don't pollute memory files
+- Example: You try InversifyJS → document it → later remove it → both versions in CLAUDE.md
+- With immediate memory updates, you'd have contradictory InversifyJS content
+
+**After Spec Complete** (>90% tasks done):
+
+```bash
+/coalesce-knowledge
+
+# Command analyzes CLAUDE.md with hindsight:
+# ✅ Factory functions (stable) → memory/development-protocols.md
+# ✅ Lambda framework (established) → Extract to /docs/, summary in CLAUDE.md
+# ✅ Serena MCP workflow (project-specific) → .claude/skills/project/
+# ❌ InversifyJS references (removed) → Delete from CLAUDE.md
+# ❌ BaseHandler framework (deprecated) → Delete from CLAUDE.md
+
+# Result: Clean, accurate knowledge without development artifacts
+```
+
+**Mid-Spec Coalescing** (if CLAUDE.md hits 800+ lines):
+
+```bash
+/coalesce-knowledge
+
+# Command marks knowledge as provisional:
+<!-- META: provisional=true spec=002 added=2025-10-28 -->
+## Lambda Handler Framework
+[Content]
+<!-- /META -->
+
+# At end-of-spec, re-run to validate and stabilize:
+/coalesce-knowledge  # Reviews provisional markers, promotes or removes
 ```
 
 ### Skill + Memory Best Practices

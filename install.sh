@@ -161,6 +161,132 @@ EOF
     echo -e "${GREEN}  ✓ Created memory/README.md${NC}"
 fi
 
+# Detect and configure documentation structure
+echo ""
+echo -e "${GREEN}Detecting documentation structure...${NC}"
+
+DOCS_DETECTION=""
+
+# Detect Docusaurus
+if [ -f "$PARENT_DIR/website/docusaurus.config.js" ]; then
+    DOCS_DETECTION="docusaurus_website"
+    echo -e "${BLUE}  ✓ Detected Docusaurus at /website/${NC}"
+elif [ -f "$PARENT_DIR/docs/docusaurus.config.js" ]; then
+    DOCS_DETECTION="docusaurus_docs"
+    echo -e "${BLUE}  ✓ Detected Docusaurus at /docs/${NC}"
+elif [ -d "$PARENT_DIR/docs" ]; then
+    DOCS_DETECTION="simple_docs"
+    echo -e "${BLUE}  ✓ Detected /docs/ directory${NC}"
+else
+    DOCS_DETECTION="none"
+    echo -e "${BLUE}  → No documentation structure detected${NC}"
+fi
+
+# Check if CLAUDE.md exists and needs documentation section
+if [ -f "$PARENT_DIR/CLAUDE.md" ]; then
+    if grep -q "## Documentation Structure" "$PARENT_DIR/CLAUDE.md"; then
+        echo -e "${BLUE}  → CLAUDE.md already has Documentation Structure section${NC}"
+    else
+        echo -e "${YELLOW}  ⚠ Adding Documentation Structure section to CLAUDE.md${NC}"
+        cat >> "$PARENT_DIR/CLAUDE.md" << 'EOF'
+
+## Documentation Structure
+
+<!--
+IMPORTANT: Configure your project's documentation approach before running /coalesce-knowledge.
+Uncomment ONE of the options below, or create a custom configuration.
+-->
+
+<!-- OPTION 1: No Documentation
+## Documentation Structure
+
+This project does not maintain separate documentation files. All architectural decisions
+and patterns are kept in CLAUDE.md, memory/ files, and .claude/skills/.
+
+When /coalesce-knowledge extracts content from CLAUDE.md, it should:
+- Move to memory/ files for business/workflow knowledge
+- Move to .claude/skills/ for project-specific patterns
+- Keep critical reference material in CLAUDE.md with size limits
+-->
+
+<!-- OPTION 2: Simple Docs Folder
+## Documentation Structure
+
+Documentation Location: `/docs/`
+
+Structure:
+- `/docs/architecture/` - Architectural decisions and patterns
+- `/docs/frameworks/` - Framework usage guides
+- `/docs/api/` - API specifications
+
+When /coalesce-knowledge extracts content from CLAUDE.md (>50 lines), it should:
+- Create markdown files in appropriate /docs/ subdirectories
+- Update CLAUDE.md with links: "See /docs/architecture/pattern-name.md for details"
+- Keep only summary and essential reference material in CLAUDE.md
+-->
+
+<!-- OPTION 3: Docusaurus Website
+## Documentation Structure
+
+Documentation Location: Docusaurus site at `/website/` (or `/docs/` if different)
+
+Docusaurus Config: `website/docusaurus.config.js`
+Content Location: `website/docs/`
+
+Structure:
+- `website/docs/architecture/` - ADRs and architectural patterns
+- `website/docs/guides/` - Development guides and workflows
+- `website/docs/api/` - API reference
+
+When /coalesce-knowledge extracts content from CLAUDE.md, it should:
+- Create properly formatted Docusaurus MDX files with frontmatter:
+  ```yaml
+  ---
+  sidebar_position: 1
+  ---
+  ```
+- Update navigation in docusaurus.config.js if needed
+- Update CLAUDE.md with links to published docs
+- Consider that docs are published, so write for broader audience
+-->
+
+<!-- OPTION 4: Custom Documentation Requirements
+## Documentation Structure
+
+See `docs/DOCUMENTATION_GUIDE.md` for complete documentation requirements and constraints.
+
+Summary:
+- [Brief description of your documentation approach]
+- [Special tools or processes required]
+- [Link formatting conventions]
+-->
+
+---
+
+**TODO: Uncomment and configure the appropriate documentation option above, then restart Claude Code.**
+
+EOF
+        echo -e "${GREEN}  ✓ Documentation Structure section added to CLAUDE.md${NC}"
+
+        case "$DOCS_DETECTION" in
+            "docusaurus_website")
+                echo -e "${BLUE}     Hint: Consider using OPTION 3 (Docusaurus at /website/)${NC}"
+                ;;
+            "docusaurus_docs")
+                echo -e "${BLUE}     Hint: Consider using OPTION 3 (Docusaurus at /docs/)${NC}"
+                ;;
+            "simple_docs")
+                echo -e "${BLUE}     Hint: Consider using OPTION 2 (Simple /docs/ folder)${NC}"
+                ;;
+            "none")
+                echo -e "${BLUE}     Hint: Consider using OPTION 1 (No documentation) or OPTION 2 (Simple /docs/ folder)${NC}"
+                ;;
+        esac
+    fi
+else
+    echo -e "${BLUE}  → No CLAUDE.md found (will be added when created)${NC}"
+fi
+
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║   Installation Complete!                                  ║${NC}"
@@ -174,18 +300,20 @@ echo "  $PARENT_DIR/.claude/commands/   - AI commands (individual symlinks)"
 echo "  $PARENT_DIR/.claude/agents/     - AI subagents (individual symlinks)"
 echo ""
 echo -e "${BLUE}Available commands:${NC}"
-echo "  /specify     - Create a new feature specification"
-echo "  /plan        - Generate implementation plan"
-echo "  /tasks       - Break down plan into tasks"
-echo "  /implement   - Implement tasks (single: T001, range: T001-T005, list: T001, T003)"
-echo "  /audit       - Audit completed tasks"
-echo "  /analyze     - Check consistency across spec/plan/tasks"
-echo "  /clarify     - Detect ambiguities and ask questions"
-echo "  /constitution - Manage project principles"
+echo "  /specify          - Create a new feature specification"
+echo "  /plan             - Generate implementation plan"
+echo "  /tasks            - Break down plan into tasks"
+echo "  /implement        - Implement tasks (single: T001, range: T001-T005, list: T001, T003)"
+echo "  /audit            - Audit completed tasks"
+echo "  /analyze          - Check consistency across spec/plan/tasks"
+echo "  /clarify          - Detect ambiguities and ask questions"
+echo "  /constitution     - Manage project principles"
+echo "  /coalesce-knowledge - Synthesize knowledge from CLAUDE.md into long-term storage"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
 echo "  1. Customise memory/constitution.md for your project"
-echo "  2. Create a feature branch (e.g., git checkout -b 001-my-feature)"
-echo "  3. Run /specify to start a new feature"
+echo "  2. Configure Documentation Structure in CLAUDE.md (for /coalesce-knowledge)"
+echo "  3. Create a feature branch (e.g., git checkout -b 001-my-feature)"
+echo "  4. Run /specify to start a new feature"
 echo ""
 echo -e "${GREEN}Happy coding!${NC}"
