@@ -1,1 +1,0 @@
-/home/zacbraddy/Projects/subly/ai-software-dev-workbench/speckit/templates/commands/constitution.md
