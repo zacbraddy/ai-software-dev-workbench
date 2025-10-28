@@ -34,7 +34,9 @@
       "Bash(test:*)",
       "Bash(cat:*)",
       "Bash(pnpm test:unit:*)",
-      "Bash(pnpm prettier:*)"
+      "Bash(pnpm prettier:*)",
+      "Bash(speckit/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(pnpm test:integration:*)"
     ],
     "deny": []
   }
