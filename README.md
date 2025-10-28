@@ -132,7 +132,7 @@ For quick setup or non-git projects:
 
 ```bash
 cd your-project
-git clone https://github.com/your-username/ai-software-dev-workbench.git
+git clone https://github.com/zacbraddy/ai-software-dev-workbench.git
 cd ai-software-dev-workbench
 ./install.sh
 cd ..
