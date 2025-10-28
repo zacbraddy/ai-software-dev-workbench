@@ -59,7 +59,7 @@ This command synthesizes knowledge from CLAUDE.md and coalesces it into appropri
    - Read existing memory files from `memory.files[]`
    - Read existing skill files from `skills.files[]`
 
-## Step 2: Spec Completion Detection
+## Step 2: Spec Completion Detection & Mode Configuration
 
 1. **Determine Mode Based on Completion**:
    ```
@@ -76,7 +76,34 @@ This command synthesizes knowledge from CLAUDE.md and coalesces it into appropri
        mode_description = "General knowledge organization"
    ```
 
-2. **Announce Assumption and Confirm with User**:
+2. **If END_OF_SPEC Mode, Scan for Additional Work**:
+
+   **Phase A: Identify provisional content requiring validation**
+   - Search all memory files for `<!-- META: provisional=true spec={spec.name}` markers
+   - Search skill files for provisional frontmatter entries matching current spec
+   - Count and categorise provisional items found:
+     - Items from current spec (need validation/finalisation)
+     - Items from other specs (leave untouched)
+
+   **Phase B: Identify spec files with extractable long-term knowledge**
+   - Check for existence of spec files: spec.md, plan.md, research.md, data-model.md
+   - Scan contracts/ directory if exists
+   - Read each file and identify sections with long-term value:
+     - **spec.md**: Decision rationales, constraints, business rules, non-functional requirements
+     - **plan.md**: Architectural patterns established, integration strategies, reusable approaches
+     - **research.md**: Technology evaluations, technical discoveries, competitor analysis
+     - **data-model.md**: Schema patterns, data modelling decisions
+     - **contracts/**: API contracts, interface definitions
+   - Count extractable sections per file
+
+   **Phase C: Check if spec already processed**
+   - Look for `.coalesced-*` file in spec directory
+   - If found, note the previous processing date
+   - User can override to reprocess if needed
+
+3. **Announce Assumption and Confirm with User**:
+
+   **If MID_SPEC or NO_ACTIVE_SPEC**:
    ```markdown
    📊 **Spec Status**: {spec.name} ({completion}% complete - {spec.completed_tasks}/{spec.total_tasks} tasks)
    📄 **CLAUDE.md**: {claude_md.line_count} lines ({size_in_KB}KB){warning_if_large}
@@ -86,9 +113,39 @@ This command synthesizes knowledge from CLAUDE.md and coalesces it into appropri
    Is this correct? Reply "yes" to continue or correct me if needed.
    ```
 
-3. **Wait for User Confirmation**:
+   **If END_OF_SPEC**:
+   ```markdown
+   📊 **Spec Status**: {spec.name} ({completion}% complete - END_OF_SPEC MODE)
+   📄 **CLAUDE.md**: {claude_md.line_count} lines ({size_in_KB}KB){warning_if_large}
+   📋 **Documentation**: {documentation.type}
+
+   🔍 **Provisional Content Found**:
+   - {count} items in memory/ files requiring validation (from spec: {spec.name})
+   - {count} items in .claude/skills/ requiring validation (from spec: {spec.name})
+   {if count > 0: "These will be validated against final implementation"}
+
+   📚 **Spec Files Analysis**:
+   - spec.md: {count} sections with long-term value identified
+   - plan.md: {count} architectural patterns to preserve
+   - research.md: {count} decisions to document
+   - data-model.md: {exists ? count + " schema patterns" : "not found"}
+   - contracts/: {count} files found
+   {if any_count > 0: "Knowledge from these files will be extracted to permanent locations"}
+
+   {if previously_coalesced:}
+   ⚠️  This spec was previously coalesced on {previous_date}. Reprocessing will update based on current state.
+
+   This will be a comprehensive consolidation including:
+   1. CLAUDE.md cleanup (as usual)
+   2. Provisional content validation & finalisation ({count} items)
+   3. Spec knowledge extraction to permanent locations ({count} sections)
+
+   Continue? Reply "yes" or correct any details.
+   ```
+
+4. **Wait for User Confirmation**:
    - If user corrects spec completion status, adjust mode accordingly
-   - If user confirms, proceed to analysis
+   - If user confirms, proceed to appropriate analysis based on mode
 
 ## Step 3: Knowledge Analysis
 
@@ -443,6 +500,275 @@ No action needed - content remains in place
 3. Note: Future runs of /coalesce-knowledge can detect these markers and re-propose
 ```
 
+## Step 6.5: Validate and Finalise Provisional Content (END_OF_SPEC Mode Only)
+
+**ONLY execute this step if mode == "END_OF_SPEC"**
+
+This step processes all provisional content markers that were added during MID_SPEC runs and finalises them based on the completed implementation.
+
+### Memory File Provisional Items
+
+For each provisional item found in memory files (from Step 2, Phase A):
+
+1. **Read the provisional section**:
+   - Extract content between `<!-- META: provisional=true spec={spec.name} -->` and `<!-- /META -->`
+   - Identify the memory file, section name, and content
+
+2. **Present item to user for validation**:
+   ```markdown
+   ### Provisional Item {number} of {total}
+
+   📍 **Location**: memory/{filename}.md
+   📝 **Section**: {section_name}
+   📅 **Added**: {date_from_metadata}
+   📊 **From Spec**: {spec.name}
+
+   **Content Preview**:
+   ```
+   {first_100_chars_of_content}...
+   ```
+
+   **Validation Options**:
+   1. **Establish** - Pattern used and proven, convert to established (remove provisional marker)
+   2. **Remove** - Pattern not used or superseded, delete from memory
+   3. **Keep Provisional** - Pattern still evolving, leave as-is
+   4. **Edit** - Content needs adjustment before establishing
+   5. **Skip** - Deal with this later
+
+   Your choice (1-5)?
+   ```
+
+3. **Wait for user response and execute**:
+   - **Option 1 (Establish)**:
+     - Remove `<!-- META: provisional=true ... -->` and `<!-- /META -->` markers
+     - Add established marker: `**Established**: {YYYY-MM-DD} (spec: {spec.name})`
+     - Track change for summary
+
+   - **Option 2 (Remove)**:
+     - Delete entire section including markers
+     - Clean up any orphaned headers
+     - Track change for summary
+
+   - **Option 3 (Keep Provisional)**:
+     - Leave unchanged
+     - Track as "still provisional" for summary
+
+   - **Option 4 (Edit)**:
+     - Present current content in editable format
+     - Accept user's edited version
+     - Remove provisional marker, add established marker with edited content
+     - Track change for summary
+
+   - **Option 5 (Skip)**:
+     - Leave unchanged
+     - Track as "skipped" for summary
+
+4. **Repeat for all provisional items in memory files**
+
+### Skill File Provisional Items
+
+For each provisional item found in skill file frontmatter:
+
+1. **Read the skill file and parse provisional entries**:
+   ```yaml
+   ---
+   name: techsift
+   description: ...
+   provisional:
+     - section: "Lambda Handler Patterns"
+       spec: "002-user-and-tenant"
+       added: "2025-10-20"
+   ---
+   ```
+
+2. **Present item to user for validation** (same options as memory files):
+   ```markdown
+   ### Provisional Skill Item {number} of {total}
+
+   📍 **Location**: .claude/skills/{project-name}/SKILL.md
+   📝 **Section**: {section_name}
+   📅 **Added**: {added_date}
+   📊 **From Spec**: {spec.name}
+
+   **Content Preview**:
+   {Find section in skill file body and show preview}
+
+   [Same validation options 1-5 as above]
+   ```
+
+3. **Execute user's choice**:
+   - **Option 1 (Establish)**: Remove entry from provisional frontmatter array
+   - **Option 2 (Remove)**: Remove entry from provisional frontmatter AND delete section from skill file body
+   - **Option 3 (Keep Provisional)**: Leave unchanged
+   - **Option 4 (Edit)**: Present section content, accept edits, remove from provisional frontmatter
+   - **Option 5 (Skip)**: Leave unchanged
+
+4. **Clean up frontmatter**:
+   - If provisional array becomes empty, remove the entire `provisional:` key
+   - Write updated skill file
+
+## Step 6.6: Extract Knowledge from Spec Files (END_OF_SPEC Mode Only)
+
+**ONLY execute this step if mode == "END_OF_SPEC"**
+
+This step extracts long-term valuable knowledge from spec directory files and moves it to permanent locations.
+
+### General Extraction Principles
+
+- **COPY, don't move**: Spec files remain as historical record
+- **Add source metadata**: All extracted content should reference source spec and file
+- **Batch by target file**: Group extractions by destination to minimise file operations
+- **Skip if already coalesced**: Check for `.coalesced-*` marker (unless user overrides)
+
+### spec.md Extraction
+
+1. **Identify extractable sections**:
+   Look for sections like:
+   - "Constraints" / "Non-Functional Requirements"
+   - "Business Rules"
+   - "Decision:", "Rationale:", "Why:" headings
+   - "Compliance" / "Security Requirements"
+   - "Out of Scope" (useful for future reference)
+
+2. **Categorise each section**:
+   - **Constitution material**: Compliance rules, business constraints, non-negotiable requirements
+   - **Development protocols**: Technical constraints, stack decisions, architecture requirements
+   - **Documentation**: Detailed API specs, complex business rules (>50 lines)
+
+3. **Present extraction plan to user**:
+   ```markdown
+   ## spec.md Knowledge Extraction
+
+   Found {count} sections worth preserving:
+
+   1. **Constraints** (lines {start}-{end}) → memory/constitution.md § Business Constraints
+   2. **Tech Stack Decision** (lines {start}-{end}) → memory/development-protocols.md § Stack Choices
+   3. **API Design Details** (lines {start}-{end}) → /docs/api/user-management-api.md (new file)
+
+   Approve all, or reply with item numbers to select specific extractions.
+   Reply "skip" to skip spec.md entirely.
+   ```
+
+4. **Execute approved extractions**:
+   For each approved item:
+   - Read target file (memory or docs)
+   - Find appropriate section (create if doesn't exist)
+   - Format content with source attribution:
+     ```markdown
+     {Content from spec.md}
+
+     **Source**: spec {spec.name} - spec.md (lines {start}-{end})
+     **Established**: {YYYY-MM-DD}
+     ```
+   - Insert into target file
+   - Track change for summary
+
+### plan.md Extraction
+
+1. **Identify extractable sections**:
+   - "Architecture" / "Technical Approach"
+   - "Integration Strategy"
+   - "Implementation Patterns"
+   - "Phase X: ..." sections with reusable approaches
+   - Diagrams (as references to preserve)
+
+2. **Categorise**:
+   - **Development protocols**: Architectural patterns, integration approaches
+   - **Task execution patterns**: Reusable implementation workflows
+   - **Documentation**: Detailed integration guides (>50 lines), architecture diagrams
+
+3. **Present and execute** (same flow as spec.md)
+
+### research.md Extraction
+
+1. **Identify extractable sections**:
+   - "Technology Evaluation: [Tech]"
+   - "Decision: [Choice] over [Alternative]"
+   - "Competitor Analysis"
+   - "Technical Discoveries" / "Findings"
+   - "Trade-offs" / "Pros and Cons"
+
+2. **Categorise**:
+   - **Development protocols**: Technology choices, technical decisions
+   - **Program overview**: Competitor analysis, market research (business-relevant)
+   - **Documentation**: Detailed evaluations, technical deep-dives
+
+3. **Present and execute** (same flow)
+
+### data-model.md Extraction
+
+1. **Identify extractable sections**:
+   - "Schema Design Decisions"
+   - "Data Modelling Patterns"
+   - "Relationship Patterns"
+   - Complete entity definitions (if reusable pattern)
+
+2. **Categorise**:
+   - **Development protocols**: Data modelling patterns, schema decisions
+   - **Documentation**: Complete schema reference, entity relationship diagrams
+
+3. **Present and execute** (same flow)
+
+### contracts/ Directory Extraction
+
+1. **List all contract files**:
+   - API contracts (REST, GraphQL, gRPC, etc.)
+   - Interface definitions
+   - Type definitions (if not already in code)
+
+2. **Determine extraction targets**:
+   - **Documentation**: All contracts → `/docs/api/` or `/docs/contracts/`
+   - Create one doc file per contract file
+   - Preserve directory structure: `contracts/user-api.yaml` → `/docs/api/user-api.md`
+
+3. **Present batch extraction plan**:
+   ```markdown
+   ## contracts/ Directory Extraction
+
+   Found {count} contract files:
+
+   1. contracts/user-management-api.yaml → /docs/api/user-management-api.md
+   2. contracts/tenant-api.yaml → /docs/api/tenant-api.md
+
+   Extract all to /docs/api/? (yes/no/select)
+   ```
+
+4. **Execute**: Create documentation files with contract content and metadata
+
+### Mark Spec as Coalesced
+
+After all extractions complete:
+
+1. **Create completion marker file**:
+   ```
+   File: {spec.dir}/.coalesced-{YYYY-MM-DD}
+
+   Content:
+   ---
+   coalesced_date: {YYYY-MM-DD}
+   spec_name: {spec.name}
+   spec_completion: {completion_percent}%
+
+   knowledge_extracted_to:
+     - memory/constitution.md: {count} sections
+     - memory/development-protocols.md: {count} sections
+     - memory/task-execution-patterns.md: {count} sections
+     - docs/api/: {count} files
+     - docs/architecture/: {count} files
+
+   provisional_items_processed:
+     established: {count}
+     removed: {count}
+     kept_provisional: {count}
+     skipped: {count}
+
+   notes: |
+     {Any user-provided notes about this consolidation}
+   ---
+   ```
+
+2. **Track all extractions for final summary**
+
 ## Step 7: Post-Execution Validation
 
 After all actions executed:
@@ -480,18 +806,23 @@ After all actions executed:
 {For each modified memory file:}
 - **{filename}**: Added {count} new sections ({line_count} lines)
   {if mid_spec: "- {count} marked as provisional (MID-SPEC mode)"}
+  {if end_of_spec: "- {count} extracted from spec files"}
+  {if end_of_spec: "- {count} provisional items established"}
   - Sections: {list_of_section_names}
 
 ### .claude/skills/{project}/SKILL.md
 {If modified:}
 - Updated {count} sections ({line_count} lines added)
   {if mid_spec: "- Marked as provisional in frontmatter"}
+  {if end_of_spec: "- {count} provisional items established (removed from provisional array)"}
   - Sections: {list_of_section_names}
 
 ### Documentation Created
 {For each new doc file:}
 - **{filepath}** (NEW - {line_count} lines)
-  - Extracted from CLAUDE.md lines {start}-{end}
+  - Extracted from {source: "CLAUDE.md" or "spec files"}
+  {if from_claude_md: "- Original location: CLAUDE.md lines {start}-{end}"}
+  {if from_spec_files: "- Source: {spec.name}/{filename}"}
   - {if docusaurus: "Format: MDX with frontmatter"}
 
 ### Content Removed
@@ -502,6 +833,46 @@ After all actions executed:
 - **{count} items** not implemented (marked with COALESCE_DEFER)
   - Items: {list_of_item_numbers}
   - Reasons: {summary_of_reasons}
+
+{if end_of_spec:}
+
+---
+
+### 🎯 END_OF_SPEC Additional Consolidation
+
+#### Provisional Content Validation
+- **Established**: {count} items converted to permanent patterns
+  - Memory files: {count} sections
+  - Skill files: {count} sections
+- **Removed**: {count} items (patterns not used or superseded)
+- **Kept Provisional**: {count} items (still evolving)
+- **Skipped**: {count} items (deferred for future review)
+
+#### Spec Knowledge Extraction
+- **spec.md**: {count} sections extracted
+  - To memory/constitution.md: {count}
+  - To memory/development-protocols.md: {count}
+  - To docs/: {count}
+- **plan.md**: {count} sections extracted
+  - To memory/development-protocols.md: {count}
+  - To memory/task-execution-patterns.md: {count}
+  - To docs/architecture/: {count}
+- **research.md**: {count} sections extracted
+  - To memory/development-protocols.md: {count}
+  - To memory/program_overview.md: {count}
+  - To docs/: {count}
+- **data-model.md**: {count} sections extracted
+  - To memory/development-protocols.md: {count}
+  - To docs/: {count}
+- **contracts/**: {count} files extracted
+  - To docs/api/: {count}
+  - To docs/contracts/: {count}
+
+#### Spec Completion Marker
+- Created: {spec.dir}/.coalesced-{YYYY-MM-DD}
+- This spec will not be reprocessed in future coalesce runs (unless you override)
+
+{/if}
 
 ---
 
@@ -599,25 +970,51 @@ Would you like me to explain any of the changes in detail?
    - Don't extract everything - some things need to stay for quick access
    - Balance between size reduction and usability
 
-8. **When in doubt about categorization, ask the user**
+8. **When in doubt about categorisation, ask the user**
    - Better to confirm than make wrong decision
    - Use progressive disclosure - ask about one section at a time if needed
 
+9. **END_OF_SPEC mode requires comprehensive consolidation**
+   - MUST process Steps 6.5 (provisional validation) and 6.6 (spec extraction)
+   - Do not skip these steps even if CLAUDE.md has no changes
+   - Provisional content exists independently of CLAUDE.md state
+   - Spec files always contain valuable knowledge worth extracting
+
+10. **Spec files are historical records - never delete or modify them**
+    - ALWAYS copy content when extracting, never move
+    - Spec directories serve as project history
+    - .coalesced-{date} marker prevents reprocessing, not deletion
+
 ## Success Criteria
 
+### Universal (All Modes)
 ✅ Documentation configuration validated before proceeding
 ✅ Spec completion correctly detected and mode set
 ✅ User confirmed mode before analysis
-✅ All CLAUDE.md sections categorized appropriately
+✅ All CLAUDE.md sections categorised appropriately
 ✅ Interactive report presented with numbered items
 ✅ Conversation loop allows discussion without report spam
 ✅ Flexible selection syntax parsed correctly
 ✅ All approved actions executed automatically
-✅ Provisional markers added for mid-spec knowledge
-✅ Deferred items marked for future re-evaluation
 ✅ Memory files updated without contradictions
-✅ Skills files updated with proper markers
 ✅ Documentation files created per project configuration
 ✅ CLAUDE.md reduced in size while preserving critical content
 ✅ Final summary shows all changes comprehensively
 ✅ User reminded to restart Claude Code
+
+### MID_SPEC Mode Specific
+✅ Provisional markers added for all new knowledge
+✅ Deferred items marked for future re-evaluation
+✅ Skills files updated with proper provisional frontmatter
+
+### END_OF_SPEC Mode Specific
+✅ All provisional content from current spec identified and scanned
+✅ User given validation options for each provisional item
+✅ Provisional markers removed or kept based on user choices
+✅ Spec files analysed for long-term knowledge
+✅ Extractable sections identified and categorised correctly
+✅ User approves extraction plan before execution
+✅ Spec knowledge extracted with proper source attribution
+✅ Spec files left intact (COPY not move)
+✅ .coalesced-{date} marker created in spec directory
+✅ Final summary includes provisional validation and spec extraction statistics
