@@ -36,7 +36,9 @@
       "Bash(pnpm test:unit:*)",
       "Bash(pnpm prettier:*)",
       "Bash(speckit/scripts/bash/check-prerequisites.sh:*)",
-      "Bash(pnpm test:integration:*)"
+      "Bash(pnpm test:integration:*)",
+      "mcp__context7__get-library-docs",
+      "mcp__context7__resolve-library-id"
     ],
     "deny": []
   }
