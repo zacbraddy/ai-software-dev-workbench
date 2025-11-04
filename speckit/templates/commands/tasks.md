@@ -52,10 +52,12 @@ $ARGUMENTS
 
 7. Create FEATURE_DIR/tasks.md with:
    - Correct feature name from implementation plan
-   - Numbered tasks (T001, T002, etc.)
+   - Numbered tasks (T001, T002, etc.) as headings: `### T001: Task name`
    - Clear file paths for each task
    - Dependency notes
    - Parallel execution guidance
+   - Task details: **File**, **Description**, **Dependencies**, **Expected Outcome**
+   - Completion tracking: End each task with `- [ ] **Complete**` on a new line before the separator
 
 Context for task generation: $ARGUMENTS
 
