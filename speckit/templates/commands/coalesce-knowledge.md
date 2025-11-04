@@ -15,14 +15,18 @@ This command synthesizes knowledge from CLAUDE.md and coalesces it into appropri
 
 ## Step 1: Load Context and Validate Configuration
 
+**CRITICAL**: The bash script `coalesce-analysis.sh` has ALREADY been executed via the frontmatter `scripts:` directive. The JSON output is available in the command context. DO NOT run your own manual bash commands to gather this data - you will get incorrect results and waste tokens.
+
 1. **Parse the bash script output** (already executed via frontmatter):
-   - Extract JSON into variables
-   - `spec`: Current spec information (dir, name, completion_percent, total_tasks, completed_tasks)
-   - `claude_md`: CLAUDE.md file information (path, size_bytes, line_count, exists)
-   - `memory`: Memory directory information (dir, files[], exists)
-   - `skills`: Skills directory information (dir, files[], exists)
-   - `documentation`: Documentation configuration (configured, type, instructions)
-   - `project_root`: Absolute path to project root
+   - The script output is provided as JSON in the command context
+   - Extract JSON into variables:
+     - `spec`: Current spec information (dir, name, completion_percent, total_tasks, completed_tasks)
+     - `claude_md`: CLAUDE.md file information (path, size_bytes, line_count, exists)
+     - `memory`: Memory directory information (dir, files[], exists)
+     - `skills`: Skills directory information (dir, files[], exists)
+     - `documentation`: Documentation configuration (configured, type, instructions)
+     - `project_root`: Absolute path to project root
+   - **Trust this data** - it comes from the correct script execution
 
 2. **Validate Documentation Configuration**:
    ```
