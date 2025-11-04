@@ -38,7 +38,8 @@
       "Bash(speckit/scripts/bash/check-prerequisites.sh:*)",
       "Bash(pnpm test:integration:*)",
       "mcp__context7__get-library-docs",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "mcp__serena__list_dir"
     ],
     "deny": []
   }
