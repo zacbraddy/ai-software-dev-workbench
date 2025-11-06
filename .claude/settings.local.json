@@ -44,7 +44,7 @@
       "mcp__serena__find_symbol",
       "mcp__serena__find_file",
       "mcp__serena__get_symbols_overview",
-      "Bash(pnpm --filter @promptalicious/frontend format:*)"
+      "mcp__serena__initial_instructions"
     ],
     "deny": []
   }
