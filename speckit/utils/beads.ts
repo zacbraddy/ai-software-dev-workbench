@@ -1,7 +1,20 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { handleBeadsError } from './beads-error-handler';
 
 const execAsync = promisify(exec);
+
+// Re-export error handling utilities for convenient access
+export {
+  BeadsError,
+  BeadsErrorCategory,
+  categoriseBeadsError,
+  formatBeadsError,
+  handleBeadsError,
+  isBeadsInstalled,
+  isBeadsInitialised,
+  validateBeadsVersion,
+} from './beads-error-handler';
 
 /**
  * Escapes a string for safe use in shell commands by replacing single quotes
@@ -166,11 +179,12 @@ export class BeadsClient {
     const stealthFlag = options.stealth ? '--stealth' : '';
     const command = `${this.bdCommand} init ${stealthFlag}`.trim();
 
-    try {
-      await execAsync(command);
-    } catch (error) {
-      throw new Error(`Failed to initialize Beads: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        await execAsync(command);
+      },
+      command
+    );
   }
 
   /**
@@ -189,12 +203,13 @@ export class BeadsClient {
 
     const command = `${this.bdCommand} create ${escapeShellArg(title)} -t ${type} -p ${priority} ${parentFlag} ${descriptionFlag} ${bodyFileFlag} ${depsFlag} --json`.trim();
 
-    try {
-      const { stdout } = await execAsync(command);
-      return JSON.parse(stdout.trim()) as BeadsIssue;
-    } catch (error) {
-      throw new Error(`Failed to create ${type}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return JSON.parse(stdout.trim()) as BeadsIssue;
+      },
+      command
+    );
   }
 
   /**
@@ -241,11 +256,12 @@ export class BeadsClient {
     const { issueId, status } = options;
     const command = `${this.bdCommand} update ${issueId} --status ${status}`;
 
-    try {
-      await execAsync(command);
-    } catch (error) {
-      throw new Error(`Failed to update ${issueId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        await execAsync(command);
+      },
+      command
+    );
   }
 
   /**
@@ -257,11 +273,12 @@ export class BeadsClient {
   async updateMultiple(issueIds: string[], status: string): Promise<void> {
     const command = `${this.bdCommand} update ${issueIds.join(' ')} --status ${status}`;
 
-    try {
-      await execAsync(command);
-    } catch (error) {
-      throw new Error(`Failed to update issues: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        await execAsync(command);
+      },
+      command
+    );
   }
 
   /**
@@ -274,11 +291,12 @@ export class BeadsClient {
     const reasonFlag = reason ? `--reason ${escapeShellArg(reason)}` : '';
     const command = `${this.bdCommand} close ${issueId} ${reasonFlag}`.trim();
 
-    try {
-      await execAsync(command);
-    } catch (error) {
-      throw new Error(`Failed to close ${issueId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        await execAsync(command);
+      },
+      command
+    );
   }
 
   /**
@@ -290,11 +308,12 @@ export class BeadsClient {
     const { childId, parentId } = options;
     const command = `${this.bdCommand} dep add ${childId} ${parentId}`;
 
-    try {
-      await execAsync(command);
-    } catch (error) {
-      throw new Error(`Failed to add dependency ${childId} -> ${parentId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        await execAsync(command);
+      },
+      command
+    );
   }
 
   /**
@@ -306,12 +325,13 @@ export class BeadsClient {
   async show(issueId: string): Promise<BeadsIssue> {
     const command = `${this.bdCommand} show ${issueId} --json`;
 
-    try {
-      const { stdout } = await execAsync(command);
-      return JSON.parse(stdout.trim()) as BeadsIssue;
-    } catch (error) {
-      throw new Error(`Failed to show ${issueId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return JSON.parse(stdout.trim()) as BeadsIssue;
+      },
+      command
+    );
   }
 
   /**
@@ -322,12 +342,13 @@ export class BeadsClient {
   async ready(): Promise<BeadsReadyResponse> {
     const command = `${this.bdCommand} ready --json`;
 
-    try {
-      const { stdout } = await execAsync(command);
-      return JSON.parse(stdout.trim()) as BeadsReadyResponse;
-    } catch (error) {
-      throw new Error(`Failed to get ready tasks: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return JSON.parse(stdout.trim()) as BeadsReadyResponse;
+      },
+      command
+    );
   }
 
   /**
@@ -338,12 +359,13 @@ export class BeadsClient {
   async list(): Promise<BeadsListResponse> {
     const command = `${this.bdCommand} list --json`;
 
-    try {
-      const { stdout } = await execAsync(command);
-      return JSON.parse(stdout.trim()) as BeadsListResponse;
-    } catch (error) {
-      throw new Error(`Failed to list issues: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return JSON.parse(stdout.trim()) as BeadsListResponse;
+      },
+      command
+    );
   }
 
   /**
@@ -353,11 +375,12 @@ export class BeadsClient {
   async sync(): Promise<void> {
     const command = `${this.bdCommand} sync`;
 
-    try {
-      await execAsync(command);
-    } catch (error) {
-      throw new Error(`Failed to sync: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        await execAsync(command);
+      },
+      command
+    );
   }
 
   /**
@@ -371,12 +394,13 @@ export class BeadsClient {
     const fixFlag = options.fix ? '--fix' : '';
     const command = `${this.bdCommand} doctor ${fixFlag}`.trim();
 
-    try {
-      const { stdout } = await execAsync(command);
-      return stdout;
-    } catch (error) {
-      throw new Error(`Beads doctor failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return stdout;
+      },
+      command
+    );
   }
 
   /**
@@ -387,12 +411,13 @@ export class BeadsClient {
   async checkVersion(): Promise<string> {
     const command = `${this.bdCommand} --version`;
 
-    try {
-      const { stdout } = await execAsync(command);
-      return stdout.trim();
-    } catch (error) {
-      throw new Error(`Failed to check Beads version: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return stdout.trim();
+      },
+      command
+    );
   }
 
   /**
@@ -404,11 +429,12 @@ export class BeadsClient {
   async setConfig(key: string, value: string): Promise<void> {
     const command = `${this.bdCommand} config set ${key} ${escapeShellArg(value)}`;
 
-    try {
-      await execAsync(command);
-    } catch (error) {
-      throw new Error(`Failed to set config ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        await execAsync(command);
+      },
+      command
+    );
   }
 
   /**
@@ -420,12 +446,13 @@ export class BeadsClient {
   async getConfig(key: string): Promise<string> {
     const command = `${this.bdCommand} config get ${key}`;
 
-    try {
-      const { stdout } = await execAsync(command);
-      return stdout.trim();
-    } catch (error) {
-      throw new Error(`Failed to get config ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return stdout.trim();
+      },
+      command
+    );
   }
 
   /**
@@ -436,12 +463,13 @@ export class BeadsClient {
   async listConfig(): Promise<BeadsConfigListResponse> {
     const command = `${this.bdCommand} config list --json`;
 
-    try {
-      const { stdout } = await execAsync(command);
-      return JSON.parse(stdout.trim()) as BeadsConfigListResponse;
-    } catch (error) {
-      throw new Error(`Failed to list config: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return JSON.parse(stdout.trim()) as BeadsConfigListResponse;
+      },
+      command
+    );
   }
 
   /**
@@ -452,11 +480,12 @@ export class BeadsClient {
   async unsetConfig(key: string): Promise<void> {
     const command = `${this.bdCommand} config unset ${key}`;
 
-    try {
-      await execAsync(command);
-    } catch (error) {
-      throw new Error(`Failed to unset config ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        await execAsync(command);
+      },
+      command
+    );
   }
 
   /**
@@ -470,12 +499,13 @@ export class BeadsClient {
     const autoMergeFlag = options.autoMerge ? '--auto-merge' : '';
     const command = `${this.bdCommand} duplicates ${autoMergeFlag} --json`.trim();
 
-    try {
-      const { stdout } = await execAsync(command);
-      return JSON.parse(stdout.trim()) as BeadsDuplicatesResponse;
-    } catch (error) {
-      throw new Error(`Failed to check duplicates: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return JSON.parse(stdout.trim()) as BeadsDuplicatesResponse;
+      },
+      command
+    );
   }
 
   /**
@@ -490,12 +520,13 @@ export class BeadsClient {
     const dryRunFlag = options.dryRun ? '--dry-run' : '';
     const command = `${this.bdCommand} cleanup ${dryRunFlag}`.trim();
 
-    try {
-      const { stdout } = await execAsync(command);
-      return stdout;
-    } catch (error) {
-      throw new Error(`Failed to run bd cleanup: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return stdout;
+      },
+      command
+    );
   }
 
   /**
@@ -507,12 +538,13 @@ export class BeadsClient {
   async prime(): Promise<string> {
     const command = `${this.bdCommand} prime`;
 
-    try {
-      const { stdout } = await execAsync(command);
-      return stdout;
-    } catch (error) {
-      throw new Error(`Failed to run bd prime: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return stdout;
+      },
+      command
+    );
   }
 
   /**
@@ -535,12 +567,13 @@ export class BeadsClient {
 
     const command = `${this.bdCommand} setup claude ${flags.join(' ')}`.trim();
 
-    try {
-      const { stdout } = await execAsync(command);
-      return stdout;
-    } catch (error) {
-      throw new Error(`Failed to setup Claude integration: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return handleBeadsError(
+      async () => {
+        const { stdout } = await execAsync(command);
+        return stdout;
+      },
+      command
+    );
   }
 }
 
