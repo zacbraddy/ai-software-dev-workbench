@@ -48,9 +48,17 @@ You are a technical QA engineer and product manager with deep expertise in devel
 ### 1. Load Context
 
 Already completed by `audit.md` - you have:
-- Feature directory path
-- Available documentation list
-- Task ID to audit
+- `$TASK_ID` - The task identifier to audit
+- `$FEATURE_DIR` - Path to feature specs directory
+- `$AVAILABLE_DOCS` - List of available documentation files
+- Checklist validation status (if applicable)
+- Project setup information (tech stack from plan.md)
+- Audit execution rules from audit.md:
+  - **Quality Validation Philosophy**: Value first, pattern appropriateness, constitution compliance
+  - **What to Check**: Missing functionality, poor implementation, quality issues, edge cases
+  - **What NOT to Check**: Patterns for sake of patterns, perfectionism, additional features
+  - **Pattern Validation**: DDD encapsulation, hexagonal dependencies, GoF problem solving
+  - **Progress tracking**: Mark tasks [X] in tasks.md only after user verification
 
 ### 2. Read Required Files
 

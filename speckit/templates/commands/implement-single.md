@@ -51,9 +51,16 @@ You are a senior developer and architect. You understand:
 ### 1. Load Context
 
 Already completed by `implement.md` - you have:
-- Feature directory path
-- Available documentation list
-- Task ID to implement
+- `$TASK_ID` - The task identifier
+- `$FEATURE_DIR` - Path to feature specs directory
+- `$AVAILABLE_DOCS` - List of available documentation files
+- Checklist validation status (if applicable)
+- Project setup information (tech stack, ignore patterns from plan.md)
+- Implementation execution rules from implement.md:
+  - **Phase-by-phase execution**: Setup → Tests → Core → Integration → Polish
+  - **TDD approach**: Execute test tasks before their corresponding implementation tasks
+  - **File-based coordination**: Tasks affecting the same files must run sequentially
+  - **Progress tracking**: Mark tasks as [X] in tasks.md after completion
 
 ### 2. Read Required Files
 

@@ -16,9 +16,12 @@ disable-model-invocation: true
 ### 1. Load Context
 
 Already completed by `audit.md` - you have:
-- Feature directory path
-- Available documentation list
-- Array of task IDs to audit
+- `$TASK_IDS` - Array of task identifiers to audit
+- `$FEATURE_DIR` - Path to feature specs directory
+- `$AVAILABLE_DOCS` - List of available documentation files
+- Checklist validation status (if applicable)
+- Project setup information (tech stack from plan.md)
+- Audit execution rules from audit.md (passed to subagents)
 
 ### 2. Read Tasks File
 
@@ -44,38 +47,21 @@ For each $TASK_ID in $TASK_IDS:
     - Task ID: $TASK_ID
     - Feature directory: $FEATURE_DIR
     - Available docs: $AVAILABLE_DOCS
+    - Project setup: tech stack from plan.md
+    - Audit rules: Follow audit.md execution rules
+      - Quality Validation Philosophy (value first, pattern appropriateness, constitution compliance)
+      - What to Check (missing functionality, poor implementation, quality issues, edge cases)
+      - What NOT to Check (patterns for patterns' sake, perfectionism, additional features)
+      - Pattern Validation (DDD encapsulation, hexagonal dependencies, GoF problem solving)
 
-    ## Your Persona & Approach
+    ## Your Approach
 
-    You are a technical QA engineer and product manager with deep expertise in development quality standards. You validate implementations against requirements with precision whilst maintaining pragmatic velocity.
-
-    **Quality Validation Philosophy:**
+    Follow the same quality validation philosophy defined in audit-single.md:
     - **Value first** - Does implementation deliver value as defined in applicable memory files?
-    - **Pattern appropriateness** - Are DDD, hexagonal, GoF patterns used correctly for architectural value?
-    - **Architecture alignment** - Does it fit the project's architectural patterns?
-    - **Constitution compliance** - Non-negotiable principles from constitution.md followed?
+    - **Pattern appropriateness** - Are patterns used correctly for architectural value?
+    - **Architecture alignment** - Does it fit the project's patterns?
+    - **Constitution compliance** - Follow all principles from memory/constitution.md
     - **Right-sized quality** - Appropriate for current stage, not premature optimisation
-
-    **What You're Looking For:**
-    - Missing functionality described in the task
-    - Poor implementation that doesn't meet requirements
-    - Code quality issues (lint, typecheck failures)
-    - Test failures (unexpected ones, not TDD failures)
-    - Edge cases not handled
-    - Patterns misapplied or missing where they'd add architectural value
-
-    **What You're NOT Looking For:**
-    - Suggesting patterns just to use patterns
-    - Perfectionism that blocks shipping
-    - Additional features beyond task scope
-    - Premature optimisation
-    - Over-engineering for hypothetical future needs
-
-    **Pattern Validation:**
-    - If DDD bounded context used - is encapsulation proper?
-    - If hexagonal architecture applied - are dependencies pointing inward?
-    - If GoF pattern used - does it solve a real problem here?
-    - If specific architecture pattern used - does it follow established conventions?
 
     ## Your Workflow
 
@@ -100,7 +86,7 @@ For each $TASK_ID in $TASK_IDS:
        - Make judgement call on what is appropriate for this specific task
        - Report results
 
-    6. **Run Tests**: Execute relevant tests
+    6. **Run Tests**: Execute relevant tests (if applicable)
        - Report test results
        - Expected TDD failures are acceptable
        - Unexpected failures need investigation
@@ -110,23 +96,13 @@ For each $TASK_ID in $TASK_IDS:
        - Check for edge cases not handled
        - Verify error handling
 
-    8. **Integration with Constitution** - All audits must verify compliance:
-       - **Domain Compliance**: Check project-specific compliance rules
-       - **Unix Philosophy**: Verify single-purpose implementation
-       - **Value-First Development**: Ensure feature contributes to goals
-       - **Technical Patterns**: Validate project's established architecture
-       - **Quality Gates**: Appropriate checks must pass
-       - **Debugging Protocol**: No reasoning loops in implementation
-
-    9. **SpecKit Context Awareness** - Reference these memory files:
-       - `memory/program_overview.md` - Product vision, value definition, project goals
-       - `memory/constitution.md` - Core principles, compliance requirements, quality standards
+    8. **SpecKit Context Awareness** - Reference memory files:
+       - `memory/program_overview.md` - Product vision, value definition
+       - `memory/constitution.md` - Core principles, compliance requirements
        - Other files in memory/ folder relevant to validation
-       - Check task requirements from tasks.md
        - Verify against constitution principles
        - Validate appropriate quality gates
        - Ensure value delivery
-       - Confirm technical standards from development protocols
 
     ## Return Format
 

@@ -4,41 +4,113 @@ description: Audit one or more tasks after implementation. Pass single task (T00
 
 User input: $ARGUMENTS
 
-## Task Detection and Mode Selection
+## Pre-Audit Validation
 
-1. **Parse task specification(s)** from `$ARGUMENTS`:
-   - Single task: `T001` (regex: `/^T\d{3}$/`)
-   - Range: `T001-T005` (regex: `/^T\d{3}-T\d{3}$/`)
-   - List with ranges: `T001, T003-T005, T009` (comma-separated, can include ranges)
-
-2. **Validate format**:
-   - If no valid task format detected, STOP and tell user: "Please provide task ID(s) in format: T001 (single), T001-T005 (range), or T001, T003-T005 (list)"
-   - Extract all task IDs from ranges and lists into array
-
-3. **Load context** (required for both modes):
+1. **Load context** (required):
    - Run `bash speckit/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks`
-   - 
    - Parse JSON output to extract:
      - `FEATURE_DIR` - Path to feature specification directory
      - `AVAILABLE_DOCS` - List of available documentation files
 
-4. **Determine execution mode and load appropriate script**:
+2. **Check checklists status** (if FEATURE_DIR/checklists/ exists):
+   - Scan all checklist files in the checklists/ directory
+   - For each checklist, count:
+     - Total items: All lines matching `- [ ]` or `- [X]` or `- [x]`
+     - Completed items: Lines matching `- [X]` or `- [x]`
+     - Incomplete items: Lines matching `- [ ]`
+   - Create a status table:
+
+     ```text
+     | Checklist | Total | Completed | Incomplete | Status |
+     |-----------|-------|-----------|------------|--------|
+     | ux.md     | 12    | 12        | 0          | ✓ PASS |
+     | test.md   | 8     | 5         | 3          | ✗ FAIL |
+     ```
+
+   - Calculate overall status:
+     - **PASS**: All checklists have 0 incomplete items
+     - **FAIL**: One or more checklists have incomplete items
+
+   - **If any checklist is incomplete**:
+     - Display the table with incomplete item counts
+     - Note: Audits can proceed even with incomplete checklists (informational only)
+
+   - **If all checklists are complete**:
+     - Display the table showing all checklists passed
+     - Automatically proceed to step 3
+
+3. **Load and analyze the audit context**:
+   - **REQUIRED**: Read tasks.md for the complete task list
+   - **REQUIRED**: Read plan.md for tech stack, architecture, and file structure
+   - **IF EXISTS**: Read data-model.md for entities and relationships
+   - **IF EXISTS**: Read contracts/ for API specifications and test requirements
+   - **IF EXISTS**: Read research.md for technical decisions and constraints
+   - **IF EXISTS**: Read quickstart.md for integration scenarios
+
+## Task Detection and Mode Selection
+
+4. **Parse task specification(s)** from `$ARGUMENTS`:
+   - Single task: `T001` (regex: `/^T\d{3}$/`)
+   - Range: `T001-T005` (regex: `/^T\d{3}-T\d{3}$/`)
+   - List with ranges: `T001, T003-T005, T009` (comma-separated, can include ranges)
+
+5. **Validate format**:
+   - If no valid task format detected, STOP and tell user: "Please provide task ID(s) in format: T001 (single), T001-T005 (range), or T001, T003-T005 (list)"
+   - Extract all task IDs from ranges and lists into array
+
+6. **Determine execution mode and load appropriate script**:
    ```
    task_count = length of extracted task IDs array
 
    if (task_count == 1) {
      MODE = "SINGLE"
-     Read and execute: .claude/commands/audit-single.md
+     Read and execute: speckit/templates/commands/audit-single.md
    } else {
      MODE = "PARALLEL"
-     Read and execute: .claude/commands/audit-parallel.md
+     Read and execute: speckit/templates/commands/audit-parallel.md
    }
    ```
 
-5. **Execute the loaded script**:
-   - Pass variables: $TASK_ID (single) or $TASK_IDS (parallel), $FEATURE_DIR, $AVAILABLE_DOCS
-   - Follow all instructions in the loaded script
+7. **Execute the loaded script**:
+   - Pass variables: $TASK_ID (single) or $TASK_IDS (plural), $FEATURE_DIR, $AVAILABLE_DOCS, and all context loaded above
+   - The loaded script will handle actual audit following the rules below
    - Do NOT continue reading this file beyond this point
+
+## Audit Execution Rules (For Single/Parallel Scripts)
+
+**Quality Validation Philosophy:**
+- **Value first** - Does implementation deliver value as defined in program_overview.md?
+- **Pattern appropriateness** - Are DDD, hexagonal, GoF patterns used correctly for architectural value?
+- **Architecture alignment** - Does it fit the project's architectural patterns?
+- **Constitution compliance** - Non-negotiable principles from constitution.md followed?
+- **Right-sized quality** - Appropriate for current stage, not premature optimisation
+
+**What to Check:**
+- Missing functionality described in the task
+- Poor implementation that doesn't meet requirements
+- Code quality issues (lint, typecheck failures)
+- Test failures (unexpected ones, not TDD failures)
+- Edge cases not handled
+- Patterns misapplied or missing where they'd add architectural value
+
+**What NOT to Check:**
+- Suggesting patterns just to use patterns
+- Perfectionism that blocks shipping
+- Additional features beyond task scope
+- Premature optimisation
+- Over-engineering for hypothetical future needs
+
+**Pattern Validation:**
+- If DDD bounded context used - is encapsulation proper?
+- If hexagonal architecture applied - are dependencies pointing inward?
+- If GoF pattern used - does it solve a real problem here?
+- If specific architecture pattern used - does it follow established conventions?
+
+**Progress tracking:**
+- Report progress after each completed audit
+- Provide clear findings with context for each task
+- Suggest fixes if issues found
+- **IMPORTANT**: For passing tasks, mark the task as [X] in tasks.md only after user verification
 
 ## Task ID Parsing Logic (Reference)
 

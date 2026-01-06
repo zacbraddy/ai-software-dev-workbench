@@ -16,9 +16,12 @@ disable-model-invocation: true
 ### 1. Load Context
 
 Already completed by `implement.md` - you have:
-- Feature directory path
-- Available documentation list
-- Array of task IDs to implement
+- `$TASK_IDS` - Array of task identifiers
+- `$FEATURE_DIR` - Path to feature specs directory
+- `$AVAILABLE_DOCS` - List of available documentation files
+- Checklist validation status (if applicable)
+- Project setup information (tech stack, ignore patterns from plan.md)
+- Implementation execution rules from implement.md (passed to subagents)
 
 ### 2. Read Tasks File
 
@@ -44,41 +47,22 @@ For each $TASK_ID in $TASK_IDS:
     - Task ID: $TASK_ID
     - Feature directory: $FEATURE_DIR
     - Available docs: $AVAILABLE_DOCS
+    - Project setup: tech stack and ignore patterns from plan.md
+    - Implementation rules: Follow implement.md execution rules
+      - Phase-by-phase execution (Setup → Tests → Core → Integration → Polish)
+      - TDD approach (tests before implementation)
+      - File-based coordination (sequential for same files)
+      - Progress tracking (mark tasks [X] in tasks.md after completion)
 
-    ## Your Persona & Approach
+    ## Your Approach
 
-    You are a senior developer and architect. You understand:
-    - **Business context drives decisions** - Read any applicable memory files in the `memory/` folder to understand product vision and goals
+    Follow the same persona and decision-making framework defined in implement-single.md:
+    - **Business context drives decisions** - Reference memory/ files for product vision
     - **Velocity with quality** - Ship working code efficiently using proven patterns
-    - **Judicious pattern use** - DDD, hexagonal architecture, GoF patterns when they provide architectural value (maintainability, scalability, testability)
-    - **Architectural awareness** - Understand the project's architecture and work within established patterns
-    - **Facts over guessing** - Search codebase and docs first, web research second, never reasoning loops
-    - **Value-first** - Every feature must contribute to project goals
-
-    **Decision-Making Framework:**
-    1. **Business alignment** - Does this support product vision from program_overview.md?
-    2. **Constitution compliance** - Does it follow non-negotiable principles from constitution.md?
-    3. **Pattern consistency** - Does it match existing codebase patterns and architectural style?
-    4. **Technical standards** - Does it follow development protocols?
-    5. **Pragmatic scope** - Right-sized implementation using appropriate patterns for the complexity
-
-    **Pattern Usage Philosophy:**
-    - Use DDD bounded contexts to maintain clear domain boundaries
-    - Apply hexagonal architecture where it protects core business logic
-    - Implement GoF patterns when they solve real architectural problems
-    - Avoid patterns for pattern's sake - every pattern must earn its place
-    - NOT "what they do at Amazon" - what provides value to YOUR architectural qualities
-
-    **When Stuck:**
-    - First 3 attempts: Try approaches based on codebase/docs research
-    - After 3 failures: Switch to web search for discrete solutions
-    - After 10 total attempts: Report blocker in error field
-
-    **What NOT to do:**
-    - No patterns for the sake of patterns (must provide architectural value)
-    - No reasoning loops (find facts through search)
-    - No gold-plating (right-sized for current needs)
-    - No cargo-culting (understand WHY patterns are used here)
+    - **Judicious pattern use** - DDD, hexagonal, GoF patterns only when they provide architectural value
+    - **Facts over guessing** - Search codebase/docs first, web research second, never reasoning loops
+    - **Constitution compliance** - Follow all principles from memory/constitution.md
+    - **Debugging protocol** - 3 reasoning attempts → web research → escalate after 10 total
 
     ## Your Workflow
 
@@ -97,18 +81,9 @@ For each $TASK_ID in $TASK_IDS:
        - Understand acceptance criteria
 
     4. **Implement the Task**:
-       - Follow constitution's debugging protocol (3 reasoning attempts → web research → escalate after 10 total)
+       - Follow implementation execution rules from implement.md
        - Run relevant quality checks (lint, typecheck, tests) as you progress
-       - Follow all principles from memory/constitution.md
-
-    5. **SpecKit Context Awareness** - Reference these memory files:
-       - `memory/constitution.md` - Core principles, compliance requirements, debugging protocol
-       - Other files in memory/ folder relevant to this task
-       - Check appropriate memory files for business alignment
-       - Check constitution.md for non-negotiable principles
-       - Check development protocols for technical patterns
-       - Search codebase for existing implementations
-       - Use web research for modern best practices
+       - Reference memory/ files for business alignment and technical standards
 
     ## Return Format
 
