@@ -242,7 +242,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
    **Execute Beads Command**:
    - Map priority to Beads priority: P1→1, P2→2, P3→3
-   - Run: `bd create "STORY_TITLE" -t story -p BEADS_PRIORITY --parent EPIC_ID --body-file /tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md --json`
+   - Run: `bd create "STORY_TITLE" -t feature -p BEADS_PRIORITY --parent EPIC_ID --body-file /tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md --json`
    - Capture JSON output
    - Parse JSON to extract story ID from `.id` field (e.g., "bd-a3f8.1")
    - Store mapping: US1 → story ID (e.g., {"label": "US1", "id": "bd-a3f8.1", "title": "Beads Task Management Integration"})
@@ -256,21 +256,199 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Build stories array: `[{"label": "US1", "id": "bd-xxx", "title": "..."}, ...]`
 
    **Step 5.4: Create Tasks**
+
    For each task in tasks.md (in execution order T001, T002, T003...):
-   - Extract task ID, description, [P] marker, [Story] label
-   - Map task to parent story using [Story] label (e.g., [US1] → story ID for US1)
-   - If no [Story] label: Map to appropriate story based on phase (Setup → first story, Foundational → first story)
-   - SYNTHESIZE task description per `contracts/beads-synthesis-templates.md` Task template:
-     - File Paths (all files this task creates/modifies/deletes)
-     - Acceptance Criteria (specific testable criteria)
-     - Task-Specific Notes (IMPORTANT/CRITICAL/WARNING/TEMPORARY markers)
-     - Dependencies (depends on, blocks, parallel with)
-     - Testing Instructions (post-completion verification)
-   - Write task description to temp file: `/tmp/task-${TASK_ID}-description-${TIMESTAMP}.md`
-   - Execute: `bd create "TASK_TITLE" -t task -p 2 --parent STORY_ID --body-file /tmp/task-${TASK_ID}-description-${TIMESTAMP}.md --json`
-   - Parse JSON output to extract Beads task ID (e.g., "bd-abc")
-   - Store mapping: T001 → Beads ID, T002 → Beads ID, etc.
-   - Clean up temp file
+
+   **Extract Task Metadata**:
+   - Parse tasks.md for task entries matching pattern: `- [ ] T\d{3} [P?] [Story?] Description`
+   - Extract task ID (e.g., "T001", "T002", "T003")
+   - Extract task title/description (text after markers, before file paths)
+   - Extract [P] marker: Present = parallelizable (true), Absent = sequential (false)
+   - Extract [Story] label (e.g., "[US1]", "[US2]") if present
+   - Extract checkbox status: `[ ]` = pending, `[x]` or `[X]` = complete
+
+   **Map Task to Parent Story**:
+   - IF task has [Story] label (e.g., [US1]):
+     - Look up story ID from stories array built in Step 5.3
+     - Example: [US1] → find story with label "US1" → use its Beads ID as parent
+   - ELSE IF task is in Setup phase (before first user story phase):
+     - Assign to first story in array (typically US1 or setup story)
+   - ELSE IF task is in Foundational phase:
+     - Assign to first story in array (typically US1 or foundational story)
+   - ELSE IF task is in Polish/Final phase:
+     - Assign to last story in array
+   - ELSE:
+     - Analyse task location in tasks.md, determine which phase header it's under
+     - Map phase to story based on section headers
+
+   **Synthesize Task Description** per `contracts/beads-synthesis-templates.md` Task template:
+
+   1. **Title**:
+      - Use format: `# [Task ID] [Task Description from tasks.md]`
+      - Example: `# T020 - Create TEMPORARY markdown-to-Beads migration utility`
+
+   2. **File Paths**:
+      - Parse task description and additional task details for file paths
+      - Look for patterns: `src/...`, `packages/...`, absolute paths, `in FILE_PATH`, `to FILE_PATH`
+      - List all files this task creates, modifies, or deletes
+      - Include CREATE/MODIFY/DELETE annotations
+      - If no explicit paths found in tasks.md, infer from plan.md structure section
+      - Example:
+        ```
+        ## File Paths
+        - techsift/migrate-tasks-to-beads.ts (CREATE - temporary, will be deleted in T023)
+        - .beads/issues.jsonl (MODIFY - add Epic/Story/Task entries)
+        ```
+
+   3. **Acceptance Criteria**:
+      - Extract explicit criteria from tasks.md task description
+      - Look for bullet points after task title, "must", "should", "verify" keywords
+      - If no explicit criteria in tasks.md: Infer from plan.md task details
+      - Generate specific, testable criteria based on task action verbs:
+        - "Create" → File exists, contains expected structure
+        - "Implement" → Functionality works, tests pass
+        - "Update" → Changes applied correctly, no regressions
+        - "Migrate" → Source → destination mapping complete, validation passes
+      - Each criterion should be verifiable via command, test, or observation
+      - Example:
+        ```
+        ## Acceptance Criteria
+        - Migration utility reads markdown tasks.md and extracts Epic/Story/Task data
+        - Epic description synthesized per Epic template (overview, implementation strategy, dependency flow, story rules, scope)
+        - Story description synthesized per Story template (goal, independent test criteria, acceptance scenarios, checkpoints, technical notes, dependencies)
+        - Task description synthesized per Task template (file paths, acceptance criteria, task-specific notes, dependencies, testing instructions)
+        - Utility validates markdown structure before migration (no parsing errors)
+        - Utility outputs validation report showing completeness percentage
+        ```
+
+   4. **Task-Specific Notes**:
+      - Scan task description for special markers:
+        - **IMPORTANT**: Critical information for implementation
+        - **CRITICAL**: Blocking issues or requirements
+        - **WARNING**: Potential pitfalls or gotchas
+        - **TEMPORARY**: Scaffolding code that will be deleted later
+        - **NOTE**: Additional context or explanations
+      - Preserve exact wording from tasks.md
+      - Include marker type and description
+      - Example:
+        ```
+        ## Task-Specific Notes
+        **IMPORTANT**: This is TEMPORARY SCAFFOLDING created in techsift root (not ai-software-dev-workbench) to avoid polluting workbench git history. Will be deleted in T023 after migration verified.
+
+        **CRITICAL**: Ensure FULL CONTEXT PARITY - Epic/Story/Task descriptions must contain ALL project management context from markdown so developers don't need to reference source documents during implementation.
+        ```
+
+   5. **Dependencies**:
+      - Analyse task relationships from tasks.md:
+
+      **Depends On** (tasks that MUST complete before this task):
+      - Look for explicit "Depends on: T001" or "(depends on T002)" in task description
+      - If task is NOT marked [P] and is NOT first in phase: Depends on previous task in same phase
+      - If task mentions "after T001" or "requires T002": Add dependency
+      - Example: T002 depends on T001 if T001 must complete first
+
+      **Blocks** (tasks that CANNOT start until this task completes):
+      - Reverse lookup: Which tasks list this task as dependency?
+      - If this task creates infrastructure needed by later tasks: List those tasks
+      - Example: T001 blocks T002 if T002 depends on T001
+
+      **Parallel With** (tasks that CAN run simultaneously):
+      - IF task is marked [P]: List other [P] tasks in same phase with no file conflicts
+      - Check for file path conflicts: Tasks touching same files CANNOT run in parallel
+      - Tasks in different phases typically cannot run in parallel
+      - Example: T005 [P] and T006 [P] can run in parallel if they touch different files
+
+      - Format dependencies as:
+        ```
+        ## Dependencies
+        - Depends on: T007, T008, T009 (Beads wrapper utilities must exist)
+        - Blocks: T021 (migration execution), T022 (verification), T023 (deletion)
+        - Parallel with: None (sequential migration workflow)
+        ```
+
+   6. **Testing Instructions** (post-completion verification):
+      - Generate verification steps based on task type:
+
+      **For "Create" tasks** (new files):
+      - Verify file exists at expected path
+      - Verify file contains expected structure/exports
+      - Run linter/type checker to verify no errors
+      - Example: `ls -l FILE_PATH`, `npx tsc --noEmit FILE_PATH`
+
+      **For "Implement" tasks** (functionality):
+      - Run relevant tests (unit, integration)
+      - Verify functionality works via manual test or example usage
+      - Check for error handling edge cases
+      - Example: `npm test -- FILE_PATH.test.ts`, manual workflow test
+
+      **For "Update" tasks** (modifications):
+      - Verify changes applied correctly (grep, diff)
+      - Run regression tests to ensure no breakage
+      - Verify backward compatibility if needed
+      - Example: `git diff FILE_PATH`, `npm test`
+
+      **For "Migrate" tasks** (data transformations):
+      - Run migration with --dry-run flag first
+      - Verify source → destination mapping completeness
+      - Generate validation report
+      - Verify rollback procedure works
+      - Example: `node script.ts --dry-run`, compare counts
+
+      - Format testing instructions with numbered steps and expected output:
+        ```
+        ## Testing Instructions (post-completion)
+        Run migration utility with `node techsift/migrate-tasks-to-beads.ts --dry-run` and verify:
+        1. Console output shows Epic/Story/Task synthesis in progress
+        2. Validation report displays 100% completeness for all sections
+        3. Sample Epic description matches template structure
+        4. Sample Story description includes checkpoints and dependencies
+        5. Sample Task description includes file paths and testing instructions
+        ```
+
+   **Write Task Description to Temp File**:
+   - Generate timestamp: `TIMESTAMP=$(date +%s)` (reuse from Epic/Story creation if same session)
+   - Create temp file path: `/tmp/task-${TASK_ID}-description-${TIMESTAMP}.md`
+   - Write description using template format:
+     ```markdown
+     # [Task ID] [Task Title]
+
+     ## File Paths
+     - [File path 1] (CREATE/MODIFY/DELETE annotation)
+     - [File path 2] (CREATE/MODIFY/DELETE annotation)
+
+     ## Acceptance Criteria
+     - [Specific testable criterion 1]
+     - [Specific testable criterion 2]
+
+     ## Task-Specific Notes
+     **IMPORTANT**: [Critical information]
+     **TEMPORARY**: [Scaffolding notes]
+     [Other markers as found]
+
+     ## Dependencies
+     - Depends on: [Task IDs that must complete before this task]
+     - Blocks: [Task IDs that cannot start until this task completes]
+     - Parallel with: [Task IDs that can run simultaneously]
+
+     ## Testing Instructions (post-completion)
+     [Numbered verification steps with expected output]
+     1. [First verification step]
+     2. [Second verification step]
+     ```
+
+   **Execute Beads Command**:
+   - Run: `bd create "TASK_TITLE" -t task -p 2 --parent STORY_ID --body-file /tmp/task-${TASK_ID}-description-${TIMESTAMP}.md --json`
+   - Capture JSON output
+   - Parse JSON to extract Beads task ID from `.id` field (e.g., "bd-abc")
+   - Store mapping: {"task_id": "T001", "beads_id": "bd-abc", "title": "...", "story": "US1", "parallel": true/false}
+
+   **Clean Up**:
+   - Remove temp file: `rm /tmp/task-${TASK_ID}-description-${TIMESTAMP}.md`
+
+   **Repeat for All Tasks**:
+   - Process tasks in execution order: T001, T002, T003... (as they appear in tasks.md)
+   - Maintain task mapping array: `[{"task_id": "T001", "beads_id": "bd-abc", ...}, ...]`
+   - Track parallel markers for dependency generation in Step 5.5
 
    **Step 5.5: Add Dependencies**
    For each task with dependencies in tasks.md:
