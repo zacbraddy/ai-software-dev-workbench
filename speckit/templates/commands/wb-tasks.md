@@ -43,15 +43,36 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Parallel execution examples per story
    - Implementation strategy section (MVP first, incremental delivery)
 
-5. **Generate Beads structure**:
-   After generating tasks.md, create Beads Epic/Story/Task hierarchy using `bd create` commands:
+5. **User Review and Approval Gate - Beads Generation**:
+   After tasks.md is generated, inform the user and wait for their feedback:
 
-   **Step 5.1: Check Beads Availability**
+   ```
+   I've generated a tasks file. You can find it at: $FEATURE_DIR/tasks.md
+
+   Please review the proposed tasks and either:
+   - Come back to me with suggested amendments if you'd like changes, or
+   - Let me know if the tasks are OK and I'll start generating the Beads structure based on the tasks we've agreed on.
+   ```
+
+   **Iterative Review Process**:
+   - **If user provides amendments or feedback**: Make the requested changes to tasks.md, then present the updated version and ask for review again (repeat until user is satisfied)
+   - **If user confirms tasks are OK** (e.g., "looks good", "proceed", "tasks are fine", "generate beads"): Proceed to Step 6 (Generate Beads structure)
+   - **If user wants to exit** (e.g., "stop", "cancel", "I'll do this later"): Exit gracefully with message "No problem. You can re-run this command when you're ready to continue."
+
+   IMPORTANT:
+   - Do NOT proceed with Beads generation until user explicitly confirms the tasks are acceptable
+   - Be prepared to iterate on tasks.md multiple times based on user feedback
+   - Only move to Step 6 after user gives clear approval
+
+6. **Generate Beads structure**:
+   After user approval, create Beads Epic/Story/Task hierarchy using `bd create` commands:
+
+   **Step 6.1: Check Beads Availability**
    - Run `bd --version` to verify Beads CLI is installed
    - If not available: Skip Beads generation, report warning to user
    - If available: Proceed with Beads structure creation
 
-   **Step 5.2: Create Epic**
+   **Step 6.2: Create Epic**
 
    **Extract Epic Title**:
    - Read spec.md first line matching pattern `# Feature Specification: ...`
@@ -129,12 +150,12 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Run: `bd create "EPIC_TITLE" -t epic -p 1 --body-file /tmp/epic-description-${TIMESTAMP}.md --json`
    - Capture JSON output
    - Parse JSON to extract epic ID from `.id` field (e.g., "bd-a3f8")
-   - Store epic ID for use in Step 5.3 (story creation)
+   - Store epic ID for use in Step 6.3 (story creation)
 
    **Clean Up**:
    - Remove temp file: `rm /tmp/epic-description-${TIMESTAMP}.md`
 
-   **Step 5.3: Create Stories**
+   **Step 6.3: Create Stories**
 
    For each user story in spec.md (in priority order P1, P2, P3):
 
@@ -252,10 +273,10 @@ You **MUST** consider the user input before proceeding (if not empty).
 
    **Repeat for All User Stories**:
    - Process stories in priority order: all P1 stories first, then P2, then P3
-   - Maintain story ID mappings for use in Step 5.4 (Task creation)
+   - Maintain story ID mappings for use in Step 6.4 (Task creation)
    - Build stories array: `[{"label": "US1", "id": "bd-xxx", "title": "..."}, ...]`
 
-   **Step 5.4: Create Tasks**
+   **Step 6.4: Create Tasks**
 
    For each task in tasks.md (in execution order T001, T002, T003...):
 
@@ -269,7 +290,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
    **Map Task to Parent Story**:
    - IF task has [Story] label (e.g., [US1]):
-     - Look up story ID from stories array built in Step 5.3
+     - Look up story ID from stories array built in Step 6.3
      - Example: [US1] → find story with label "US1" → use its Beads ID as parent
    - ELSE IF task is in Setup phase (before first user story phase):
      - Assign to first story in array (typically US1 or setup story)
@@ -462,11 +483,11 @@ You **MUST** consider the user input before proceeding (if not empty).
    **Repeat for All Tasks**:
    - Process tasks in execution order: T001, T002, T003... (as they appear in tasks.md)
    - Maintain task tracking for dependency generation: `[{"task_id": "T001", "beads_id": "bd-abc", "label": "T001", "story": "US1", "parallel": true/false}, ...]`
-   - Track parallel markers for dependency generation in Step 5.5
+   - Track parallel markers for dependency generation in Step 6.5
 
-   **Step 5.5: Add Dependencies**
+   **Step 6.5: Add Dependencies**
 
-   For each task in task tracking array (built in Step 5.4):
+   For each task in task tracking array (built in Step 6.4):
 
    **Dependency Analysis Strategy**:
 
@@ -587,12 +608,12 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Warn if [P] task has sequential dependency (likely incorrect [P] marker)
    - Report total dependencies added: "Added X dependencies (Y explicit, Z sequential)"
 
-   **Step 5.6: Sync to Remote**
+   **Step 6.6: Sync to Remote**
    - Execute: `bd sync` to commit Beads changes to git
    - Verify: Run `git status` to ensure clean working directory
    - This ensures all Beads structure changes (Epic, Stories, Tasks with T001 labels, Dependencies) are synchronized to the remote repository
 
-6. **Report**: Output path to generated tasks.md and summary:
+7. **Report**: Output path to generated tasks.md and summary:
    - Total task count
    - Task count per user story
    - Parallel opportunities identified
