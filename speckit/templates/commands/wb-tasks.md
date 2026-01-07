@@ -451,11 +451,127 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Track parallel markers for dependency generation in Step 5.5
 
    **Step 5.5: Add Dependencies**
-   For each task with dependencies in tasks.md:
-   - Parse task description for "Depends on: T001" or sequential ordering
-   - Tasks without [P] marker depend on previous task in same phase
-   - Execute: `bd dep add CHILD_BEADS_ID PARENT_BEADS_ID` for each dependency
-   - Note: [P] tasks have NO dependencies (can run in parallel)
+
+   For each task in task mapping array (built in Step 5.4):
+
+   **Dependency Analysis Strategy**:
+
+   1. **Explicit Dependencies** (highest priority):
+      - Scan task description (from tasks.md) for explicit dependency markers:
+        - "Depends on: T001" or "Depends on: T001, T002"
+        - "(depends on T003)" or "requires T004"
+        - "after T005 completes" or "blocked by T006"
+      - Extract task IDs from these markers (e.g., "T001" → lookup Beads ID "bd-abc")
+      - Add dependency: `bd dep add CURRENT_TASK_BEADS_ID DEPENDENCY_BEADS_ID`
+
+   2. **Sequential Dependencies** (within same phase):
+      - IF task is NOT marked [P] (parallel):
+        - AND task is NOT first in its phase:
+        - AND previous task is in same phase (same parent story):
+        - THEN: Task depends on previous task in execution order
+        - Example: T015 (no [P]) depends on T014 (previous task in same phase)
+      - IF task IS marked [P]:
+        - NO automatic sequential dependency (can run in parallel with other [P] tasks)
+      - Exception: IF explicit dependency exists, it OVERRIDES automatic sequential rule
+
+   3. **Cross-Phase Dependencies** (blocking prerequisites):
+      - IF task mentions "Phase X must complete" or "after Foundational":
+        - Find all tasks in that phase
+        - Add dependencies on ALL tasks in prerequisite phase
+      - IF task mentions specific user story completion:
+        - Example: "US1 must complete before US3" → ALL US3 tasks depend on ALL US1 tasks
+        - Find all tasks with that story label, add dependencies
+
+   **Dependency Execution**:
+
+   1. Build dependency list:
+      ```
+      dependencies = []
+
+      For each task in task_mapping_array:
+        child_task_id = task.task_id  (e.g., "T015")
+        child_beads_id = task.beads_id  (e.g., "bd-def")
+        child_story = task.story  (e.g., "US1")
+        child_parallel = task.parallel  (true/false)
+
+        # Check for explicit dependencies
+        task_description = [read from tasks.md for this task_id]
+        explicit_deps = extract_explicit_dependencies(task_description)
+
+        For each dep_task_id in explicit_deps:
+          parent_beads_id = lookup_beads_id(dep_task_id)
+          dependencies.append({
+            "child": child_beads_id,
+            "parent": parent_beads_id,
+            "type": "explicit"
+          })
+
+        # Check for sequential dependencies (if not parallel and not first in phase)
+        If NOT child_parallel:
+          previous_task = find_previous_task_in_same_phase(child_task_id, child_story)
+          If previous_task exists:
+            parent_beads_id = previous_task.beads_id
+            dependencies.append({
+              "child": child_beads_id,
+              "parent": parent_beads_id,
+              "type": "sequential"
+            })
+      ```
+
+   2. Execute dependency commands:
+      ```bash
+      # Iterate through dependencies list
+      for dep in dependencies:
+        bd dep add ${dep.child} ${dep.parent}
+      ```
+
+   **Example Dependency Scenarios**:
+
+   **Scenario 1: Explicit Dependency**
+   ```markdown
+   - [ ] T022 [US1] Create migration utility (depends on T007-T009)
+   ```
+   Result:
+   - `bd dep add bd-xxx bd-abc` (T022 depends on T007)
+   - `bd dep add bd-xxx bd-def` (T022 depends on T008)
+   - `bd dep add bd-xxx bd-ghi` (T022 depends on T009)
+
+   **Scenario 2: Sequential Dependencies (no [P] marker)**
+   ```markdown
+   - [ ] T014 [US1] Create setup script
+   - [ ] T015 [US1] Update wb-tasks.md to generate Beads structure
+   - [ ] T016 [US1] Implement Epic creation logic
+   ```
+   Result:
+   - T015 depends on T014 (sequential in same phase)
+   - T016 depends on T015 (sequential in same phase)
+   - Commands: `bd dep add bd-T015 bd-T014`, `bd dep add bd-T016 bd-T015`
+
+   **Scenario 3: Parallel Tasks (with [P] marker)**
+   ```markdown
+   - [ ] T007 [P] [US1] Create Beads wrapper utility
+   - [ ] T008 [P] [US1] Create SpecKit-to-Beads mapper
+   - [ ] T009 [P] [US1] Implement error handling wrapper
+   ```
+   Result:
+   - NO dependencies between T007, T008, T009 (all marked [P])
+   - These tasks can run simultaneously
+
+   **Scenario 4: Mixed Sequential and Parallel**
+   ```markdown
+   - [ ] T012 [P] [US1] Rename command file (can run in parallel)
+   - [ ] T013 [US1] Create symlink (depends on T012 completing)
+   ```
+   Result:
+   - T012 has NO sequential dependency (marked [P])
+   - T013 depends on T012 (sequential, not marked [P], follows T012)
+   - Command: `bd dep add bd-T013 bd-T012`
+
+   **Dependency Validation**:
+   - Verify no circular dependencies (task A → task B → task A)
+   - Verify all referenced task IDs exist in mapping array
+   - Warn if [P] task has sequential dependency (likely incorrect [P] marker)
+   - Report total dependencies added: "Added X dependencies (Y explicit, Z sequential)"
 
    **Step 5.6: Sync to Remote**
    - Execute: `bd sync` to commit Beads changes to git
