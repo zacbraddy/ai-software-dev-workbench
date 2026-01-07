@@ -43,13 +43,100 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Parallel execution examples per story
    - Implementation strategy section (MVP first, incremental delivery)
 
-5. **Report**: Output path to generated tasks.md and summary:
+5. **Generate Beads structure**:
+   After generating tasks.md, create Beads Epic/Story/Task hierarchy using `bd create` commands:
+
+   **Step 5.1: Check Beads Availability**
+   - Run `bd --version` to verify Beads CLI is installed
+   - If not available: Skip Beads generation, report warning to user
+   - If available: Proceed with Beads structure creation
+
+   **Step 5.2: Create Epic**
+   - Extract title from spec.md (# Feature Specification: ...)
+   - SYNTHESIZE epic description per `contracts/beads-synthesis-templates.md` Epic template:
+     - Overview (2-3 sentence summary from spec.md)
+     - Implementation Strategy (MVP First, Incremental Delivery, Parallel Team)
+     - Overall Dependency Flow (high-level story dependencies)
+     - Story Dependency Rules (which stories must complete before others)
+     - Scope (total FRs, tasks, phases)
+   - Write epic description to temp file: `/tmp/epic-description-${TIMESTAMP}.md`
+   - Execute: `bd create "EPIC_TITLE" -t epic -p 1 --body-file /tmp/epic-description-${TIMESTAMP}.md --json`
+   - Parse JSON output to extract epic ID (e.g., "bd-a3f8")
+   - Clean up temp file
+
+   **Step 5.3: Create Stories**
+   For each user story in spec.md (in priority order P1, P2, P3):
+   - Extract user story title from spec.md (### User Story N - Title)
+   - SYNTHESIZE story description per `contracts/beads-synthesis-templates.md` Story template:
+     - Goal (1-2 sentence description from "Why this priority")
+     - Independent Test Criteria (from "Independent Test" paragraph)
+     - Acceptance Scenarios (all Given/When/Then scenarios)
+     - Checkpoints (if multi-phase story - from tasks.md phase checkpoints)
+     - Technical Notes (from plan.md)
+     - Dependencies (analyse story ordering from plan.md)
+   - Write story description to temp file: `/tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md`
+   - Execute: `bd create "STORY_TITLE" -t story -p PRIORITY --parent EPIC_ID --body-file /tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md --json`
+   - Parse JSON output to extract story ID (e.g., "bd-a3f8.1")
+   - Store mapping: US1 → story ID, US2 → story ID, etc.
+   - Clean up temp file
+
+   **Step 5.4: Create Tasks**
+   For each task in tasks.md (in execution order T001, T002, T003...):
+   - Extract task ID, description, [P] marker, [Story] label
+   - Map task to parent story using [Story] label (e.g., [US1] → story ID for US1)
+   - If no [Story] label: Map to appropriate story based on phase (Setup → first story, Foundational → first story)
+   - SYNTHESIZE task description per `contracts/beads-synthesis-templates.md` Task template:
+     - File Paths (all files this task creates/modifies/deletes)
+     - Acceptance Criteria (specific testable criteria)
+     - Task-Specific Notes (IMPORTANT/CRITICAL/WARNING/TEMPORARY markers)
+     - Dependencies (depends on, blocks, parallel with)
+     - Testing Instructions (post-completion verification)
+   - Write task description to temp file: `/tmp/task-${TASK_ID}-description-${TIMESTAMP}.md`
+   - Execute: `bd create "TASK_TITLE" -t task -p 2 --parent STORY_ID --body-file /tmp/task-${TASK_ID}-description-${TIMESTAMP}.md --json`
+   - Parse JSON output to extract Beads task ID (e.g., "bd-abc")
+   - Store mapping: T001 → Beads ID, T002 → Beads ID, etc.
+   - Clean up temp file
+
+   **Step 5.5: Add Dependencies**
+   For each task with dependencies in tasks.md:
+   - Parse task description for "Depends on: T001" or sequential ordering
+   - Tasks without [P] marker depend on previous task in same phase
+   - Execute: `bd dep add CHILD_BEADS_ID PARENT_BEADS_ID` for each dependency
+   - Note: [P] tasks have NO dependencies (can run in parallel)
+
+   **Step 5.6: Sync to Remote**
+   - Execute: `bd sync` to commit Beads changes to git
+   - Verify: Run `git status` to ensure clean working directory
+
+   **Step 5.7: Create Task Mapping File**
+   - Write mapping file to `FEATURE_DIR/beads-task-mapping.json`:
+     ```json
+     {
+       "epic_id": "bd-a3f8",
+       "stories": [
+         {"label": "US1", "id": "bd-a3f8.1", "title": "..."},
+         {"label": "US2", "id": "bd-a3f8.2", "title": "..."}
+       ],
+       "tasks": [
+         {"task_id": "T001", "beads_id": "bd-abc", "title": "...", "story": "US1"},
+         {"task_id": "T002", "beads_id": "bd-def", "title": "...", "story": "US1"}
+       ]
+     }
+     ```
+
+6. **Report**: Output path to generated tasks.md and summary:
    - Total task count
    - Task count per user story
    - Parallel opportunities identified
    - Independent test criteria for each story
    - Suggested MVP scope (typically just User Story 1)
    - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)
+   - **NEW**: Beads structure summary:
+     - Epic ID and title
+     - Story count and IDs
+     - Task count and sample Beads IDs
+     - Path to beads-task-mapping.json
+     - Confirmation: `bd sync` completed successfully
 
 Context for task generation: {ARGS}
 
