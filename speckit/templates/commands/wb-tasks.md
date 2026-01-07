@@ -52,17 +52,87 @@ You **MUST** consider the user input before proceeding (if not empty).
    - If available: Proceed with Beads structure creation
 
    **Step 5.2: Create Epic**
-   - Extract title from spec.md (# Feature Specification: ...)
-   - SYNTHESIZE epic description per `contracts/beads-synthesis-templates.md` Epic template:
-     - Overview (2-3 sentence summary from spec.md)
-     - Implementation Strategy (MVP First, Incremental Delivery, Parallel Team)
-     - Overall Dependency Flow (high-level story dependencies)
-     - Story Dependency Rules (which stories must complete before others)
-     - Scope (total FRs, tasks, phases)
-   - Write epic description to temp file: `/tmp/epic-description-${TIMESTAMP}.md`
-   - Execute: `bd create "EPIC_TITLE" -t epic -p 1 --body-file /tmp/epic-description-${TIMESTAMP}.md --json`
-   - Parse JSON output to extract epic ID (e.g., "bd-a3f8")
-   - Clean up temp file
+
+   **Extract Epic Title**:
+   - Read spec.md first line matching pattern `# Feature Specification: ...`
+   - Extract title after the colon (e.g., "AI Software Dev Workbench Integration Improvements")
+
+   **Synthesize Epic Description** per `contracts/beads-synthesis-templates.md` Epic template:
+
+   1. **Overview** (2-3 sentence summary):
+      - Read spec.md Overview section or first paragraph after title
+      - Extract 2-3 sentences that describe feature purpose and value
+      - Example: "This feature transforms the AI Software Dev Workbench's task management from plain markdown to a structured Beads-based system, resolves command naming conflicts with Claude Code built-ins, and significantly improves integration with Serena and Context7 MCP servers."
+
+   2. **Implementation Strategy**:
+      - **MVP First**: Identify P1 user stories from spec.md
+        - Look for "Priority: P1" in user story headers
+        - Describe P1 stories as minimum viable implementation
+        - Example: "US1 (Beads Integration) and US2 (Command Namespacing) form the minimum viable implementation"
+      - **Incremental Delivery**: Identify P2/P3 user stories
+        - Look for "Priority: P2" and "Priority: P3"
+        - Describe how they add value incrementally
+        - Example: "US3 (Serena MCP) and US4 (Context7 MCP) add enhanced tool integration"
+      - **Parallel Team**: Analyse tasks.md for parallel opportunities
+        - Identify which stories can proceed in parallel after dependencies met
+        - Note story groupings from tasks.md Dependencies section
+        - Example: "After US1+US2 complete, US3/US4/US5 can proceed in parallel"
+
+   3. **Overall Dependency Flow**:
+      - Read tasks.md Dependencies section
+      - Extract high-level phase dependencies (Setup → Foundational → User Stories)
+      - Identify story blocking relationships
+      - Example: "Setup (Phase 1) → Foundational (Phase 2) → P1 Stories (US1, US2) sequentially → P2 Stories (US3, US4, US5) in parallel"
+
+   4. **Story Dependency Rules**:
+      - From tasks.md Dependencies section, extract user story dependencies
+      - List which stories MUST complete before others
+      - List which stories CAN proceed in parallel
+      - Include reasons for dependencies (e.g., "other stories depend on Beads being functional")
+      - Example:
+        - "US1 (Beads Integration) MUST complete before US3, US5, US6, US7"
+        - "US3 (Serena MCP) can start after US1+US2, independent of US4-US5"
+
+   5. **Scope**:
+      - Count functional requirements: Search spec.md for FR-001, FR-002 patterns or count user stories
+      - Count tasks: Parse tasks.md for T001, T002 patterns
+      - Count phases: Count "Phase N:" headers in tasks.md
+      - Example: "50 functional requirements (FR-001 to FR-050), 121 tasks (T001-T121), 9 phases (Setup, Foundational, US1-US7)"
+
+   **Write Epic Description to Temp File**:
+   - Generate timestamp: `TIMESTAMP=$(date +%s)`
+   - Create temp file path: `/tmp/epic-description-${TIMESTAMP}.md`
+   - Write description using template format:
+     ```markdown
+     # [Epic Title]
+
+     ## Overview
+     [2-3 sentence summary]
+
+     ## Implementation Strategy
+     - **MVP First**: [P1 stories description]
+     - **Incremental Delivery**: [P2/P3 stories description]
+     - **Parallel Team**: [Parallel opportunities description]
+
+     ## Overall Dependency Flow
+     [High-level phase and story dependencies]
+
+     ## Story Dependency Rules
+     - [Story X MUST complete before Story Y]
+     - [Stories A, B, C can proceed in parallel]
+
+     ## Scope
+     [FR count, task count, phase count]
+     ```
+
+   **Execute Beads Command**:
+   - Run: `bd create "EPIC_TITLE" -t epic -p 1 --body-file /tmp/epic-description-${TIMESTAMP}.md --json`
+   - Capture JSON output
+   - Parse JSON to extract epic ID from `.id` field (e.g., "bd-a3f8")
+   - Store epic ID for use in Step 5.3 (story creation)
+
+   **Clean Up**:
+   - Remove temp file: `rm /tmp/epic-description-${TIMESTAMP}.md`
 
    **Step 5.3: Create Stories**
    For each user story in spec.md (in priority order P1, P2, P3):
