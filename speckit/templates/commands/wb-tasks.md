@@ -135,20 +135,125 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Remove temp file: `rm /tmp/epic-description-${TIMESTAMP}.md`
 
    **Step 5.3: Create Stories**
+
    For each user story in spec.md (in priority order P1, P2, P3):
-   - Extract user story title from spec.md (### User Story N - Title)
-   - SYNTHESIZE story description per `contracts/beads-synthesis-templates.md` Story template:
-     - Goal (1-2 sentence description from "Why this priority")
-     - Independent Test Criteria (from "Independent Test" paragraph)
-     - Acceptance Scenarios (all Given/When/Then scenarios)
-     - Checkpoints (if multi-phase story - from tasks.md phase checkpoints)
-     - Technical Notes (from plan.md)
-     - Dependencies (analyse story ordering from plan.md)
-   - Write story description to temp file: `/tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md`
-   - Execute: `bd create "STORY_TITLE" -t story -p PRIORITY --parent EPIC_ID --body-file /tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md --json`
-   - Parse JSON output to extract story ID (e.g., "bd-a3f8.1")
-   - Store mapping: US1 → story ID, US2 → story ID, etc.
-   - Clean up temp file
+
+   **Extract User Story Metadata**:
+   - Parse spec.md for user story headers matching pattern `### User Story N - [Title] (Priority: P[1-3])`
+   - Extract story number (e.g., "1" from "User Story 1")
+   - Extract story title (e.g., "Beads Task Management Integration")
+   - Extract priority (P1, P2, or P3) - maps to Beads priority: P1→1, P2→2, P3→3
+   - Store user story label (e.g., "US1", "US2", "US3")
+
+   **Synthesize Story Description** per `contracts/beads-synthesis-templates.md` Story template:
+
+   1. **Title**:
+      - Use format: `# [User Story Title from spec.md]`
+      - Example: `# US1 - Beads Task Management Integration`
+
+   2. **Goal** (1-2 sentence description):
+      - Read spec.md paragraph starting with "**Why this priority**:"
+      - Extract the explanation sentence(s) after this marker
+      - Include what the story delivers and why it's valuable
+      - Example: "Replace markdown task files with Beads task management whilst preserving spec.md and plan.md as markdown, providing structured task tracking with proper hierarchies and relationships between epics, user stories, and tasks."
+
+   3. **Independent Test Criteria**:
+      - Read spec.md paragraph starting with "**Independent Test**:"
+      - Extract the test description explaining how to verify this story independently
+      - Include commands to run, expected behaviour, verification steps
+      - Example: "Run `/wb-tasks`, `/wb-implement T001`, and `/wb-audit T001` commands. Verify that `.beads/` directory is created/updated with Epic, Stories, and Tasks whilst spec.md and plan.md remain unchanged in markdown format."
+
+   4. **Acceptance Scenarios**:
+      - Read spec.md section "**Acceptance Scenarios**:"
+      - Extract ALL Given/When/Then scenarios (typically 4-6 scenarios per story)
+      - Preserve exact wording from spec.md
+      - Include scenario numbering (1., 2., 3., etc.)
+      - Example:
+        ```
+        1. **Given** a feature specification exists, **When** developer runs the tasks generation command, **Then** Beads files are created mapping spec to epic, user stories to phases, and individual tasks to Beads tasks
+        2. **Given** Beads task files exist, **When** developer runs any implement command variant...
+        ```
+
+   5. **Checkpoints** (if multi-phase story):
+      - Look in tasks.md for this story's phase
+      - Search for "**Checkpoint**:" markers or "Checkpoint A/B/C" in task descriptions
+      - If found: Extract checkpoint descriptions showing incremental progress milestones
+      - If NOT found: Omit this section (not all stories have checkpoints)
+      - Example:
+        ```
+        - **Checkpoint A**: /wb-tasks command functional, can generate Beads structure from spec+plan
+        - **Checkpoint B1**: Dual-write partial - test /wb-implement on sample task
+        - **Checkpoint C**: Beads-only mode - markdown tasks.md no longer used
+        ```
+
+   6. **Technical Notes**:
+      - Read plan.md section corresponding to this user story (search for story title or number)
+      - Extract architecture decisions, patterns to follow, constraints
+      - Include technology stack choices, storage locations, implementation approaches
+      - Example:
+        ```
+        - Beads storage location: `.beads/` directory at repo root (version controlled)
+        - Beads CLI wrapper: ai-software-dev-workbench/speckit/utils/beads.ts
+        - Migration strategy: Three-phase approach (Phase A: implement /wb-tasks, Phase B: dual-write period, Phase C: cutover)
+        ```
+
+   7. **Dependencies**:
+      - Analyse story ordering from tasks.md Dependencies section
+      - Identify which stories this story DEPENDS ON (must complete before this story starts)
+      - Identify which stories this story BLOCKS (cannot start until this story completes)
+      - Identify which stories can proceed IN PARALLEL with this story (no conflicts)
+      - Example:
+        ```
+        - Depends on: Foundational phase (T005-T009) completing to provide Beads wrapper utilities
+        - Blocks: US3 (Serena), US5 (Installation), US6 (Cleanup), US7 (Documentation) from starting
+        - Can proceed in parallel with: US2 (Command Namespacing) - different files, no conflicts
+        ```
+
+   **Write Story Description to Temp File**:
+   - Generate timestamp: `TIMESTAMP=$(date +%s)` (reuse from Epic creation if same session)
+   - Create temp file path: `/tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md`
+   - Write description using template format:
+     ```markdown
+     # [Story Title]
+
+     ## Goal
+     [1-2 sentence description from "Why this priority"]
+
+     ## Independent Test Criteria
+     **How to verify this story works independently**:
+     [Description from "Independent Test" paragraph in spec.md]
+
+     ## Acceptance Scenarios
+     [Numbered list of Given/When/Then scenarios from spec.md]
+
+     ## Checkpoints (if multi-phase story)
+     - **Checkpoint A**: [Description]
+     - **Checkpoint B**: [Description]
+     [Omit this section if no checkpoints found]
+
+     ## Technical Notes
+     [Architecture decisions, patterns, constraints from plan.md]
+
+     ## Dependencies
+     - Depends on: [Story IDs or phase names]
+     - Blocks: [Story IDs that cannot start until this completes]
+     - Can proceed in parallel with: [Story IDs with no conflicts]
+     ```
+
+   **Execute Beads Command**:
+   - Map priority to Beads priority: P1→1, P2→2, P3→3
+   - Run: `bd create "STORY_TITLE" -t story -p BEADS_PRIORITY --parent EPIC_ID --body-file /tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md --json`
+   - Capture JSON output
+   - Parse JSON to extract story ID from `.id` field (e.g., "bd-a3f8.1")
+   - Store mapping: US1 → story ID (e.g., {"label": "US1", "id": "bd-a3f8.1", "title": "Beads Task Management Integration"})
+
+   **Clean Up**:
+   - Remove temp file: `rm /tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md`
+
+   **Repeat for All User Stories**:
+   - Process stories in priority order: all P1 stories first, then P2, then P3
+   - Maintain story ID mappings for use in Step 5.4 (Task creation)
+   - Build stories array: `[{"label": "US1", "id": "bd-xxx", "title": "..."}, ...]`
 
    **Step 5.4: Create Tasks**
    For each task in tasks.md (in execution order T001, T002, T003...):
