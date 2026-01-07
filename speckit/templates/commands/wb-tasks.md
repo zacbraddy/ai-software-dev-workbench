@@ -450,22 +450,23 @@ You **MUST** consider the user input before proceeding (if not empty).
      ```
 
    **Execute Beads Command**:
-   - Run: `bd create "TASK_TITLE" -t task -p 2 --parent STORY_ID --body-file /tmp/task-${TASK_ID}-description-${TIMESTAMP}.md --json`
+   - Run: `bd create "TASK_TITLE" -t task -p 2 --parent STORY_ID --body-file /tmp/task-${TASK_ID}-description-${TIMESTAMP}.md --label ${TASK_ID} --json`
+   - Note: The --label ${TASK_ID} flag (e.g., --label T001) provides a human-readable signpost during planning; labels are searchable via 'bd list --label T001'
    - Capture JSON output
    - Parse JSON to extract Beads task ID from `.id` field (e.g., "bd-abc")
-   - Store mapping: {"task_id": "T001", "beads_id": "bd-abc", "title": "...", "story": "US1", "parallel": true/false}
+   - Store for dependency tracking: {"task_id": "${TASK_ID}", "beads_id": "bd-abc", "label": "${TASK_ID}"}
 
    **Clean Up**:
    - Remove temp file: `rm /tmp/task-${TASK_ID}-description-${TIMESTAMP}.md`
 
    **Repeat for All Tasks**:
    - Process tasks in execution order: T001, T002, T003... (as they appear in tasks.md)
-   - Maintain task mapping array: `[{"task_id": "T001", "beads_id": "bd-abc", ...}, ...]`
+   - Maintain task tracking for dependency generation: `[{"task_id": "T001", "beads_id": "bd-abc", "label": "T001", "story": "US1", "parallel": true/false}, ...]`
    - Track parallel markers for dependency generation in Step 5.5
 
    **Step 5.5: Add Dependencies**
 
-   For each task in task mapping array (built in Step 5.4):
+   For each task in task tracking array (built in Step 5.4):
 
    **Dependency Analysis Strategy**:
 
@@ -582,29 +583,14 @@ You **MUST** consider the user input before proceeding (if not empty).
 
    **Dependency Validation**:
    - Verify no circular dependencies (task A → task B → task A)
-   - Verify all referenced task IDs exist in mapping array
+   - Verify all referenced task IDs exist in task tracking array
    - Warn if [P] task has sequential dependency (likely incorrect [P] marker)
    - Report total dependencies added: "Added X dependencies (Y explicit, Z sequential)"
 
    **Step 5.6: Sync to Remote**
    - Execute: `bd sync` to commit Beads changes to git
    - Verify: Run `git status` to ensure clean working directory
-
-   **Step 5.7: Create Task Mapping File**
-   - Write mapping file to `FEATURE_DIR/beads-task-mapping.json`:
-     ```json
-     {
-       "epic_id": "bd-a3f8",
-       "stories": [
-         {"label": "US1", "id": "bd-a3f8.1", "title": "..."},
-         {"label": "US2", "id": "bd-a3f8.2", "title": "..."}
-       ],
-       "tasks": [
-         {"task_id": "T001", "beads_id": "bd-abc", "title": "...", "story": "US1"},
-         {"task_id": "T002", "beads_id": "bd-def", "title": "...", "story": "US1"}
-       ]
-     }
-     ```
+   - This ensures all Beads structure changes (Epic, Stories, Tasks with T001 labels, Dependencies) are synchronized to the remote repository
 
 6. **Report**: Output path to generated tasks.md and summary:
    - Total task count
@@ -616,8 +602,8 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **NEW**: Beads structure summary:
      - Epic ID and title
      - Story count and IDs
-     - Task count and sample Beads IDs
-     - Path to beads-task-mapping.json
+     - Task count with T001 labels (use 'bd list' to view tasks with labels)
+     - Note: Tasks are labeled with T001, T002, etc. for planning reference; use Beads IDs (bd-abc) for implementation commands
      - Confirmation: `bd sync` completed successfully
 
 Context for task generation: {ARGS}
