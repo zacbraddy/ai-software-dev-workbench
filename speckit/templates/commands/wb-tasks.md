@@ -353,10 +353,23 @@ You **MUST** consider the user input before proceeding (if not empty).
       - Example: T001 blocks T002 if T002 depends on T001
 
       **Parallel With** (tasks that CAN run simultaneously):
-      - IF task is marked [P]: List other [P] tasks in same phase with no file conflicts
-      - Check for file path conflicts: Tasks touching same files CANNOT run in parallel
-      - Tasks in different phases typically cannot run in parallel
-      - Example: T005 [P] and T006 [P] can run in parallel if they touch different files
+      - IF task is marked [P]: Analyse file path conflicts with other [P] tasks
+      - File conflict detection algorithm:
+        1. Extract all file paths from current task description (from tasks.md "File Paths" section if present, or inline file references)
+        2. For each other [P] task in same phase:
+           - Extract file paths from that task's description
+           - Compare file paths between current task and candidate parallel task
+           - IF any file path overlaps: CONFLICT - cannot run in parallel
+           - IF no file path overlaps: CAN run in parallel
+        3. Generate "Parallel with" list including only non-conflicting [P] tasks
+      - File path parsing strategy:
+        - Look for patterns: `src/...`, `packages/...`, absolute paths
+        - Look for keywords: "in FILE", "to FILE", "at FILE", "FILE_PATH"
+        - Include both CREATE and MODIFY file operations (DELETE typically safe for parallel)
+        - Normalize paths for comparison (remove leading ./, resolve relative paths)
+      - Tasks in different phases typically cannot run in parallel (different dependency chains)
+      - Example: T005 [P] creates `src/utils/beads.ts`, T006 [P] creates `src/utils/mapper.ts` → Can run in parallel (different files)
+      - Example: T007 [P] modifies `package.json`, T008 [P] modifies `package.json` → CANNOT run in parallel (same file conflict)
 
       - Format dependencies as:
         ```
