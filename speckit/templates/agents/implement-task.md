@@ -73,13 +73,81 @@ You will be invoked with:
    - **Validate against project goals**: Does this contribute to value delivery?
    - Note any constraints from constitution or plan
 
-3. **Research Implementation Approach:**
+3. **Detect Verification Tasks:**
+   **Analyze the ENTIRE task description holistically to determine if this is a verification task:**
+
+   **Verification task indicators** (multiple must be present):
+   - Task focuses on **checking/confirming** existing functionality, not building new code
+   - Contains phrases like "verify that", "confirm that", "test that", "ensure [existing thing] works"
+   - References **previously implemented**, **already deployed**, **completed**, or **existing** features
+   - Explicitly mentions **manual testing**, **manual verification**, or **user testing**
+   - Has NO file paths for new files to create (only existing files to check)
+   - Appears in **Polish/Validation** phases of tasks.md (not Setup/Implementation)
+
+   **NOT verification tasks** (these are implementation):
+   - "Create test for X" → Writing test code
+   - "Add validation to X" → Implementing validation logic
+   - "Ensure X returns Y" → Building the X functionality
+   - "Implement error handling for X" → Writing error handling code
+   - Specifies new files to create or code to write
+
+   **If this IS a verification task:**
+   - **Skip manual verification prompts** (agents work autonomously)
+   - **Attempt automated verification** if technically feasible
+   - **If automated verification not feasible**: Return status "failed" with explanation that manual verification required by user
+
+   **Automated Verification Workflow:**
+   a. Execute verification steps systematically:
+      - Test the functionality described in task
+      - Run relevant commands/tests
+      - Check expected behavior against actual behavior
+      - Document each verification step and result
+
+   b. Generate verification report at `{feature_dir}/checklists/{task_id}-verification-report.md`:
+      ```markdown
+      # Verification Report: {task_id} - {Task Title}
+
+      **Task**: {task_id}
+      **Date**: {ISO date}
+      **Verification Type**: Automated
+      **Status**: [PASS | FAIL | PARTIAL]
+
+      ## Verification Steps
+
+      ### Step 1: {Description}
+      **Action**: {What was tested}
+      **Expected**: {Expected result}
+      **Actual**: {Actual result}
+      **Status**: [✓ PASS | ✗ FAIL]
+
+      ### Step 2: {Description}
+      ...
+
+      ## Issues Encountered
+
+      {List any problems found and how they were resolved}
+
+      ## Summary
+
+      {Overall verification results}
+      {Confirmation that functionality works as specified or list of failures}
+
+      ## Recommendations
+
+      {Any follow-up actions or improvements needed}
+      ```
+
+   c. Return structured result with verification summary
+
+   **If NOT a verification task**, proceed to step 4 (Research Implementation Approach)
+
+4. **Research Implementation Approach:**
    - **First**: Search existing codebase for similar implementations
    - **Second**: Check SpecKit memory files for established patterns
    - **Third**: Web search for modern best practices if needed
    - **Never**: Guess or use reasoning loops - find facts
 
-4. **Implement the Task:**
+5. **Implement the Task:**
    - Follow existing code patterns exactly
    - Use established libraries and frameworks
    - Keep it simple - minimum viable implementation
@@ -89,14 +157,14 @@ You will be invoked with:
    - Apply relevant compliance requirements from constitution
    - Follow Unix Philosophy: single-purpose tool excellence
 
-5. **Verify Quality:**
+6. **Verify Quality:**
    - Code follows existing patterns
    - Linting and typechecking passes
    - Basic functionality works
    - No obvious bugs or security issues
    - Aligns with business objectives
 
-6. **Return Structured Result:**
+7. **Return Structured Result:**
    ```json
    {
      "task_id": "T001",
@@ -117,6 +185,7 @@ You will be invoked with:
 - **No marking tasks complete** - main agent handles that
 - **No asking questions** - make pragmatic decisions
 - **No perfectionism** - right-sized quality for current needs
+- **No manual verification prompts** - attempt automated verification or fail with explanation
 
 ## Debugging Protocol (from Constitution)
 
@@ -158,6 +227,8 @@ From `development-protocols.md`:
 ## Success Criteria
 
 Your implementation is successful when:
+
+**For implementation tasks:**
 1. Task requirements fully implemented
 2. Code follows existing patterns
 3. Lint and typecheck pass
@@ -166,5 +237,13 @@ Your implementation is successful when:
 6. Pragmatic, appropriate approach for the project
 7. **Contributes to project goals** from program_overview.md
 8. **Complies with constitution** principles and requirements
+
+**For verification tasks:**
+1. Verification executed systematically with documented steps
+2. Verification report generated at `{feature_dir}/checklists/{task_id}-verification-report.md`
+3. All verification steps have expected vs actual results
+4. Issues encountered are documented with resolutions
+5. Overall status (PASS/FAIL/PARTIAL) is justified by evidence
+6. Report is clear, structured, and actionable
 
 Remember: You're building with solid architecture. Every decision should consider: Does this deliver value? Does it support project goals? Does this pattern provide architectural value (maintainability, scalability, testability)? Follow existing patterns (DDD, hexagonal, bounded contexts), use GoF patterns where they solve real problems, and make pragmatic decisions based on research and business context from the memory files.

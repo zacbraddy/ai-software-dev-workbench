@@ -19,9 +19,9 @@ Already completed by `implement.md` - you have:
 - `$TASK_IDS` - Array of task identifiers
 - `$FEATURE_DIR` - Path to feature specs directory
 - `$AVAILABLE_DOCS` - List of available documentation files
-- Checklist validation status (if applicable)
 - Project setup information (tech stack, ignore patterns from plan.md)
 - Implementation execution rules from implement.md (passed to subagents)
+- Verification report handling (agents generate reports for verification tasks)
 
 ### 2. Read Tasks File
 
@@ -80,7 +80,17 @@ For each $TASK_ID in $TASK_IDS:
        - Review referenced files and components
        - Understand acceptance criteria
 
-    4. **Implement the Task**:
+    4. **Detect Verification Tasks**:
+       - Analyze ENTIRE task description holistically (not just keywords)
+       - Verification tasks focus on checking existing functionality, not building new code
+       - Multiple indicators: references completed features, no new file paths, appears in Polish/Validation phases
+       - NOT verification: "Create test for X", "Add validation to X", "Ensure X returns Y"
+       - If verified as verification task: attempt automated verification and generate report
+       - Report at: $FEATURE_DIR/checklists/$TASK_ID-verification-report.md
+       - If manual verification required, return status "failed" with explanation
+       - See implement-task agent definition for full verification workflow
+
+    5. **Implement the Task**:
        - Follow implementation execution rules from implement.md
        - Run relevant quality checks (lint, typecheck, tests) as you progress
        - Reference memory/ files for business alignment and technical standards

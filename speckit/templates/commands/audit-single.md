@@ -79,41 +79,168 @@ Find task with ID matching `$TASK_ID` in tasks.md
 
 Re-read the original task requirements from tasks.md
 
-### 5. Compare Implementation
+### 5. Verification Task Detection and Handling
+
+**Detect if this is a verification task** by analyzing the ENTIRE task description holistically:
+
+**Verification task indicators** (multiple must be present):
+- Task focuses on **checking/confirming** existing functionality, not building new code
+- Contains phrases like "verify that", "confirm that", "test that", "ensure [existing thing] works"
+- References **previously implemented**, **already deployed**, **completed**, or **existing** features
+- Explicitly mentions **manual testing**, **manual verification**, or **user testing**
+- Has NO file paths for new files to create (only existing files to check)
+- Appears in **Polish/Validation** phases of tasks.md (not Setup/Implementation)
+
+**NOT verification tasks** (these are implementation):
+- "Create test for X" → Writing test code
+- "Add validation to X" → Implementing validation logic
+- "Ensure X returns Y" → Building the X functionality
+- "Implement error handling for X" → Writing error handling code
+- Specifies new files to create or code to write
+
+**If this IS a verification task**, follow these rules:
+
+#### A. Check for Verification Report
+
+1. **Look for verification report** at `FEATURE_DIR/checklists/<TASK_ID>-verification-report.md`
+
+2. **If NO verification report found**:
+   - Check if task requires manual verification (contains "manual" or "manually"):
+     - **Manual verification task**:
+       ```
+       ❌ AUDIT FAIL: No verification report found
+
+       This task requires manual verification. You have these options:
+
+       1. Run `/implement <TASK_ID>` and choose "guide" to be walked through verification
+       2. Run `/implement <TASK_ID>` and choose "auto" if you'd like me to attempt automated verification
+       3. If you've already verified manually, run `/implement <TASK_ID>` and choose "guide" to document your results
+       4. If verification is complete, manually check off the task in tasks.md
+
+       Please complete verification before re-running audit.
+       ```
+       STOP audit here - cannot proceed without verification evidence
+
+     - **Automated verification task**:
+       ```
+       ❌ AUDIT FAIL: No verification report found
+
+       Please run `/implement <TASK_ID>` to perform verification and generate a verification report.
+       This automated verification task should produce a report documenting test results.
+
+       Cannot audit without verification evidence.
+       ```
+       STOP audit here - cannot proceed without verification report
+
+3. **If verification report EXISTS**, proceed to step B (audit the verification report)
+
+#### B. Audit the Verification Report
+
+Instead of auditing implementation code, audit the quality and completeness of the verification itself:
+
+1. **Read the verification report** at `FEATURE_DIR/checklists/<TASK_ID>-verification-report.md`
+
+2. **Validate verification completeness** - Check if verification covered all aspects:
+   - Were all task requirements verified?
+   - Were all acceptance criteria from the task checked?
+   - Were edge cases tested?
+   - Was the verification systematic and thorough?
+
+3. **Validate verification accuracy** - Assess the quality of verification:
+   - Are the verification steps logical and appropriate?
+   - Do the expected vs actual results make sense?
+   - Were issues properly identified and documented?
+   - If problems were found, were they resolved or documented?
+
+4. **Validate report quality** - Check documentation:
+   - Is the report well-structured and clear?
+   - Are all steps documented with expected/actual results?
+   - Is the final status (PASS/FAIL/PARTIAL) justified by the evidence?
+   - Are recommendations actionable and relevant?
+
+5. **Cross-reference with task** - Ensure alignment:
+   - Compare verification steps against task description
+   - Check if all files mentioned in task were tested
+   - Verify acceptance criteria alignment
+   - Look for missing verification areas
+
+6. **Identify gaps or issues**:
+   - Missing verification steps
+   - Inadequate testing of specific requirements
+   - Unclear or ambiguous results
+   - Unresolved issues from verification
+   - Inconsistencies between report status and evidence
+
+7. **Generate audit verdict**:
+   - **PASS**: Verification was thorough, accurate, and well-documented
+   - **FAIL**: Significant gaps in verification coverage, unclear results, or unresolved critical issues
+   - **NEEDS IMPROVEMENT**: Verification done but with minor gaps or documentation issues
+
+8. **Provide audit feedback**:
+   ```markdown
+   ## Audit Result: [PASS | FAIL | NEEDS IMPROVEMENT]
+
+   ### Verification Coverage
+   [Assessment of what was verified vs what should have been verified]
+
+   ### Verification Quality
+   [Assessment of how well verification was executed]
+
+   ### Documentation Quality
+   [Assessment of verification report quality]
+
+   ### Issues Found
+   [List any gaps, missing steps, unclear results, or concerns]
+
+   ### Recommendations
+   [Suggestions for improving verification if needed]
+
+   ### Action Required
+   [If FAIL or NEEDS IMPROVEMENT: What needs to be done before marking complete]
+   [If PASS: Confirm task can be marked complete]
+   ```
+
+9. **Do NOT mark task complete** - User must review audit and make final decision
+
+10. **Skip to step 10** (Present Findings) - DO NOT execute code quality checks or tests for verification tasks
+
+**If this is NOT a verification task**, proceed to step 6 (Compare Implementation) as normal.
+
+### 6. Compare Implementation
 
 Check what has been implemented against the task description
 - Review all files mentioned in the task
 - Check for completeness
 - Verify functionality matches requirements
 
-### 6. Verify Code Quality
+### 7. Verify Code Quality
 
 Run lint, format, and typecheck scripts for affected projects
 - Fix any errors found
 - Report results to user
 
-### 7. Run Tests
+### 8. Run Tests
 
 Execute relevant tests
 - Report test results
 - Expected TDD failures are acceptable
 - Unexpected failures need investigation
 
-### 8. Identify Gaps
+### 9. Identify Gaps
 
 Look for missing functionality or poor implementations
 - Compare against original task description
 - Check for edge cases not handled
 - Verify error handling
 
-### 9. Present Findings
+### 10. Present Findings
 
 Share any changes needed with rationale
 - Be specific about what's missing or wrong
 - Explain why each change is needed
 - Reference task requirements
 
-### 10. Await Verification
+### 11. Await Verification
 
 Give user opportunity to discuss findings
 - User may suggest changes
@@ -121,7 +248,7 @@ Give user opportunity to discuss findings
 - **If changes made**: This audit ends - user will request new `/audit` later
 - **If no changes or user approves**: Wait for user to say "I verify the task is complete"
 
-### 11. Mark Complete
+### 12. Mark Complete
 
 **ONLY after user says "I verify the task is complete"**:
 - Mark task as `[x]` in tasks.md
