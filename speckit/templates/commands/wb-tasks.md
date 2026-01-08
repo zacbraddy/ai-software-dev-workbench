@@ -613,6 +613,82 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Verify: Run `git status` to ensure clean working directory
    - This ensures all Beads structure changes (Epic, Stories, Tasks with T001 labels, Dependencies) are synchronized to the remote repository
 
+   **Step 6.7: Beads Verification and Resolution Gate**
+
+   After Beads structure is created and synced, present verification commands and work with user to ensure Beads structure is correct:
+
+   ```
+   Beads structure has been created successfully! Here are commands to verify it:
+
+   **View all Beads issues**:
+   bd list
+
+   **View the Epic details**:
+   bd show <epic-id>
+
+   **View a specific Story**:
+   bd show <story-id>
+
+   **View a specific Task**:
+   bd show <task-id>
+
+   **View tasks ready to work (no blockers)**:
+   bd ready
+
+   **View dependency graph**:
+   bd list --status=open
+
+   Please review the Beads structure using these commands. I can help you:
+   - Fix any issues with Epic/Story/Task descriptions
+   - Adjust dependencies between tasks
+   - Update priorities or labels
+   - Add missing tasks or stories
+
+   Let me know if you'd like me to make any changes, or confirm the structure is correct.
+   ```
+
+   **Iterative Resolution Process**:
+
+   - **If user identifies issues or requests changes**:
+     1. Listen to the specific problem (e.g., "T005 description is missing file paths", "T010 should depend on T009")
+     2. Determine the appropriate Beads command to fix it:
+        - Missing/incorrect description: `bd update <beads-id> --body-file /tmp/updated-description.md`
+        - Wrong dependency: `bd dep add <child-id> <parent-id>` or `bd dep remove <child-id> <parent-id>`
+        - Wrong priority: `bd update <beads-id> --priority <new-priority>`
+        - Wrong parent: Cannot change parent directly; need to close old task and recreate under correct parent
+        - Missing task: Create new task with `bd create` and add to appropriate story
+     3. Execute the fix
+     4. Present the updated verification commands again
+     5. Repeat until user is satisfied
+
+   - **If user confirms structure is correct** (e.g., "looks good", "structure is correct", "proceed", "all good"):
+     - Ask user about tasks.md deletion:
+       ```
+       The Beads structure is now verified. Would you like me to delete tasks.md?
+
+       - tasks.md was used to generate the Beads structure and is no longer needed
+       - The Beads database (.beads/) now contains all task information
+       - Keeping tasks.md: May be useful for reference or comparison
+       - Deleting tasks.md: Cleaner repo, single source of truth in Beads
+
+       Delete tasks.md? (Y/n)
+       ```
+     - If user approves deletion (e.g., "yes", "y", "delete it"):
+       - Execute: `rm $FEATURE_DIR/tasks.md`
+       - Confirm deletion: "tasks.md has been deleted. The Beads database is now the single source of truth for task management."
+     - If user declines deletion (e.g., "no", "n", "keep it"):
+       - Acknowledge: "tasks.md will be kept for reference alongside the Beads database."
+     - Execute: `bd sync` to commit all changes made during verification
+     - Proceed to Step 7 (Report)
+
+   - **If user wants to exit before verification** (e.g., "stop", "I'll verify later"):
+     - Exit gracefully with message: "No problem. The Beads structure has been created and synced. You can verify it later using the commands above, and re-run this command if you need to make changes."
+
+   **IMPORTANT**:
+   - Do NOT proceed to Step 7 until user explicitly confirms the Beads structure is correct
+   - Be prepared to iterate multiple times fixing issues
+   - tasks.md deletion is optional and controlled by user choice after verification
+
 7. **Report**: Output path to generated tasks.md and summary:
    - Total task count
    - Task count per user story
