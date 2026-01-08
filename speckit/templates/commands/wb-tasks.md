@@ -1,5 +1,5 @@
 ---
-description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
+description: Generate tasks.md for user review, then create Beads task structure and optionally delete tasks.md. After this command, Beads becomes the single source of truth for task management.
 ---
 
 ## User Input
@@ -11,6 +11,8 @@ $ARGUMENTS
 You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
+
+**Workflow Summary**: This command generates tasks.md as a temporary collaboration artifact → user reviews and approves → Beads structure is created from tasks.md → user verifies Beads → tasks.md is optionally deleted → Beads becomes the single source of truth for all future task management.
 
 1. **Setup**: Run `bash speckit/scripts/bash/check-prerequisites.sh --json` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
@@ -30,7 +32,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Create parallel execution examples per user story
    - Validate task completeness (each user story has all needed tasks, independently testable)
 
-4. **Generate tasks.md**: Use `speckit/templates/tasks-template.md` as structure, fill with:
+4. **Generate tasks.md** (temporary collaboration artifact): Use `speckit/templates/tasks-template.md` as structure, fill with:
    - Correct feature name from plan.md
    - Phase 1: Setup tasks (project initialization)
    - Phase 2: Foundational tasks (blocking prerequisites for all user stories)
@@ -674,8 +676,9 @@ You **MUST** consider the user input before proceeding (if not empty).
        Delete tasks.md? (Y/n)
        ```
      - If user approves deletion (e.g., "yes", "y", "delete it"):
-       - Execute: `rm $FEATURE_DIR/tasks.md`
-       - Confirm deletion: "tasks.md has been deleted. The Beads database is now the single source of truth for task management."
+       - Delete tasks.md file: `bash -c "rm '$FEATURE_DIR/tasks.md'"`
+       - Verify deletion succeeded: `bash -c "if [ ! -f '$FEATURE_DIR/tasks.md' ]; then echo 'Deletion confirmed'; else echo 'Deletion failed'; exit 1; fi"`
+       - Confirm to user: "tasks.md has been deleted. The Beads database is now the single source of truth for task management."
      - If user declines deletion (e.g., "no", "n", "keep it"):
        - Acknowledge: "tasks.md will be kept for reference alongside the Beads database."
      - Execute: `bd sync` to commit all changes made during verification
@@ -689,23 +692,31 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Be prepared to iterate multiple times fixing issues
    - tasks.md deletion is optional and controlled by user choice after verification
 
-7. **Report**: Output path to generated tasks.md and summary:
+7. **Report**: Output workflow summary:
+   - **tasks.md Status**:
+     - If deleted: "tasks.md has been deleted. Beads is now the single source of truth."
+     - If kept: "tasks.md kept for reference at $FEATURE_DIR/tasks.md. Beads is the primary source of truth."
    - Total task count
    - Task count per user story
    - Parallel opportunities identified
    - Independent test criteria for each story
    - Suggested MVP scope (typically just User Story 1)
    - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)
-   - **NEW**: Beads structure summary:
+   - **Beads structure summary**:
      - Epic ID and title
      - Story count and IDs
      - Task count with T001 labels (use 'bd list' to view tasks with labels)
      - Note: Tasks are labeled with T001, T002, etc. for planning reference; use Beads IDs (bd-abc) for implementation commands
      - Confirmation: `bd sync` completed successfully
+   - **Next Steps**:
+     - Use `bd ready` to see tasks available to work
+     - Use `bd show <beads-id>` to view task details
+     - Use `/wb-implement <beads-id>` to start working on a task
+     - Task management is now done entirely through Beads commands
 
 Context for task generation: {ARGS}
 
-The tasks.md should be immediately executable - each task must be specific enough that an LLM can complete it without additional context.
+**Important**: tasks.md is a temporary collaboration artifact used for user review and Beads generation. Once Beads structure is created and verified, tasks.md is typically deleted and Beads becomes the single source of truth. Each task must be specific enough that an LLM can complete it from the Beads description without additional context.
 
 ## Task Generation Rules
 
