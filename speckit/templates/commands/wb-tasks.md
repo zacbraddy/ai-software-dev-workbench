@@ -489,6 +489,13 @@ You **MUST** consider the user input before proceeding (if not empty).
 
    **Step 6.5: Add Dependencies**
 
+   **CRITICAL - Complete Dependency Creation Protocol**:
+   - Create **ALL** dependencies documented in task descriptions - do not filter, skip, or optimise
+   - Do not create only "critical" or "important" dependencies - create **EVERY** dependency relationship
+   - Every "Depends on", "Blocks", or sequential relationship mentioned in task descriptions MUST exist in Beads
+   - The complete dependency graph must match task descriptions exactly
+   - Verification: Final dependency count should reflect ALL relationships, not a subset
+
    For each task in task tracking array (built in Step 6.4):
 
    **Dependency Analysis Strategy**:
@@ -521,7 +528,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
    **Dependency Execution**:
 
-   1. Build dependency list:
+   1. Build **COMPLETE** dependency list (no filtering, no optimisation):
       ```
       dependencies = []
 
@@ -531,7 +538,7 @@ You **MUST** consider the user input before proceeding (if not empty).
         child_story = task.story  (e.g., "US1")
         child_parallel = task.parallel  (true/false)
 
-        # Check for explicit dependencies
+        # Process ALL explicit dependencies (not just "critical" ones)
         task_description = [read from tasks.md for this task_id]
         explicit_deps = extract_explicit_dependencies(task_description)
 
@@ -543,7 +550,7 @@ You **MUST** consider the user input before proceeding (if not empty).
             "type": "explicit"
           })
 
-        # Check for sequential dependencies (if not parallel and not first in phase)
+        # Process ALL sequential dependencies (if not parallel and not first in phase)
         If NOT child_parallel:
           previous_task = find_previous_task_in_same_phase(child_task_id, child_story)
           If previous_task exists:
@@ -555,9 +562,9 @@ You **MUST** consider the user input before proceeding (if not empty).
             })
       ```
 
-   2. Execute dependency commands:
+   2. Execute **ALL** dependency commands (create every dependency, do not skip any):
       ```bash
-      # Iterate through dependencies list
+      # Create every dependency in the list - no filtering
       for dep in dependencies:
         bd dep add ${dep.child} ${dep.parent}
       ```
@@ -608,7 +615,11 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Verify no circular dependencies (task A → task B → task A)
    - Verify all referenced task IDs exist in task tracking array
    - Warn if [P] task has sequential dependency (likely incorrect [P] marker)
+   - **CRITICAL**: Verify dependency count matches expected relationships from task descriptions
+     - Count expected: ALL explicit dependencies + ALL sequential dependencies
+     - If counts don't match, investigate and create missing dependencies
    - Report total dependencies added: "Added X dependencies (Y explicit, Z sequential)"
+   - **Do NOT report "critical dependencies" or "most important" - ALL dependencies must be created**
 
    **Step 6.6: Sync to Remote**
    - Execute: `bd sync` to commit Beads changes to git
