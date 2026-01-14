@@ -66,15 +66,15 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Be prepared to iterate on tasks.md multiple times based on user feedback
    - Only move to Step 6 after user gives clear approval
 
-6. **Generate Beads structure**:
-   After user approval, create Beads Epic/Story/Task hierarchy using `bd create` commands:
+6. **Generate Beads structure via Agent Orchestration**:
+   After user approval, orchestrate parallel agent-based migration using bead-creator and tasks-audit agents.
 
    **Step 6.1: Check Beads Availability**
    - Run `bd --version` to verify Beads CLI is installed
    - If not available: Skip Beads generation, report warning to user
-   - If available: Proceed with Beads structure creation
+   - If available: Proceed with orchestrated Beads structure creation
 
-   **Step 6.2: Create Epic**
+   **Step 6.2: Create Epic (Orchestrator Creates Directly)**
 
    **Extract Epic Title**:
    - Read spec.md first line matching pattern `# Feature Specification: ...`
@@ -157,551 +157,390 @@ You **MUST** consider the user input before proceeding (if not empty).
    **Clean Up**:
    - Remove temp file: `rm /tmp/epic-description-${TIMESTAMP}.md`
 
-   **Step 6.3: Create Stories**
+   **Step 6.3: Plan Agent Orchestration**
 
-   For each user story in spec.md (in priority order P1, P2, P3):
+   Parse tasks.md to identify user stories, phases, and task groupings:
 
-   **Extract User Story Metadata**:
-   - Parse spec.md for user story headers matching pattern `### User Story N - [Title] (Priority: P[1-3])`
-   - Extract story number (e.g., "1" from "User Story 1")
-   - Extract story title (e.g., "Beads Task Management Integration")
-   - Extract priority (P1, P2, or P3) - maps to Beads priority: P1→1, P2→2, P3→3
-   - Store user story label (e.g., "US1", "US2", "US3")
+   1. **Identify User Stories and Phases**:
+      - Parse tasks.md for phase headers: "## Phase N: [Phase Name]"
+      - Extract user story labels from task markers: [US1], [US2], [US3], etc.
+      - Group tasks by:
+        - **Phase-based**: Setup (T001-T011), Foundational (T012-T021c)
+        - **Story-based**: US1 (all tasks with [US1] marker), US2 (all tasks with [US2] marker)
+        - **Range-based**: Consecutive task ranges within same grouping
 
-   **Synthesize Story Description** per `contracts/beads-synthesis-templates.md` Story template:
-
-   1. **Title**:
-      - Use format: `# [User Story Title from spec.md]`
-      - Example: `# US1 - Beads Task Management Integration`
-
-   2. **Goal** (1-2 sentence description):
-      - Read spec.md paragraph starting with "**Why this priority**:"
-      - Extract the explanation sentence(s) after this marker
-      - Include what the story delivers and why it's valuable
-      - Example: "Replace markdown task files with Beads task management whilst preserving spec.md and plan.md as markdown, providing structured task tracking with proper hierarchies and relationships between epics, user stories, and tasks."
-
-   3. **Independent Test Criteria**:
-      - Read spec.md paragraph starting with "**Independent Test**:"
-      - Extract the test description explaining how to verify this story independently
-      - Include commands to run, expected behaviour, verification steps
-      - Example: "Run `/wb-tasks`, `/wb-implement T001`, and `/wb-audit T001` commands. Verify that `.beads/` directory is created/updated with Epic, Stories, and Tasks whilst spec.md and plan.md remain unchanged in markdown format."
-
-   4. **Acceptance Scenarios**:
-      - Read spec.md section "**Acceptance Scenarios**:"
-      - Extract ALL Given/When/Then scenarios (typically 4-6 scenarios per story)
-      - Preserve exact wording from spec.md
-      - Include scenario numbering (1., 2., 3., etc.)
-      - Example:
+   2. **Determine Agent Assignment Strategy**:
+      - Analyse task density per user story:
+        - If story has <15 tasks: Single agent handles entire story
+        - If story has ≥15 tasks: Split into sub-ranges (Phase A, Phase B, etc.)
+      - Maximum concurrent agents: 3-5 (configured for system capacity)
+      - Create agent workload assignments:
         ```
-        1. **Given** a feature specification exists, **When** developer runs the tasks generation command, **Then** Beads files are created mapping spec to epic, user stories to phases, and individual tasks to Beads tasks
-        2. **Given** Beads task files exist, **When** developer runs any implement command variant...
+        assignments = [
+          {"agent": "bead-creator-phase0", "story_id": "Phase 0", "task_range": "T001-T011", "task_count": 11},
+          {"agent": "bead-creator-us1a", "story_id": "US1", "task_range": "T012-T021c", "task_count": 10},
+          {"agent": "bead-creator-us1b", "story_id": "US1", "task_range": "T022-T031", "task_count": 10},
+          {"agent": "bead-creator-us2", "story_id": "US2", "task_range": "T042-T061", "task_count": 20},
+          ...
+        ]
         ```
 
-   5. **Checkpoints** (if multi-phase story):
-      - Look in tasks.md for this story's phase
-      - Search for "**Checkpoint**:" markers or "Checkpoint A/B/C" in task descriptions
-      - If found: Extract checkpoint descriptions showing incremental progress milestones
-      - If NOT found: Omit this section (not all stories have checkpoints)
-      - Example:
-        ```
-        - **Checkpoint A**: /wb-tasks command functional, can generate Beads structure from spec+plan
-        - **Checkpoint B1**: Dual-write partial - test /wb-implement on sample task
-        - **Checkpoint C**: Beads-only mode - markdown tasks.md no longer used
-        ```
+   3. **Create Migration Tracking File**:
+      - Create `$FEATURE_DIR/migration-tracking.md` with initial state:
+        ```markdown
+        # Bead Migration Tracking
 
-   6. **Technical Notes**:
-      - Read plan.md section corresponding to this user story (search for story title or number)
-      - Extract architecture decisions, patterns to follow, constraints
-      - Include technology stack choices, storage locations, implementation approaches
-      - Example:
-        ```
-        - Beads storage location: `.beads/` directory at repo root (version controlled)
-        - Beads CLI wrapper: ai-software-dev-workbench/speckit/utils/beads.ts
-        - Migration strategy: Three-phase approach (Phase A: implement /wb-tasks, Phase B: dual-write period, Phase C: cutover)
-        ```
+        **Feature**: [feature-name]
+        **Date**: [date]
+        **Epic ID**: [epic-id]
 
-   7. **Dependencies**:
-      - Analyse story ordering from tasks.md Dependencies section
-      - Identify which stories this story DEPENDS ON (must complete before this story starts)
-      - Identify which stories this story BLOCKS (cannot start until this story completes)
-      - Identify which stories can proceed IN PARALLEL with this story (no conflicts)
-      - Example:
-        ```
-        - Depends on: Foundational phase (T005-T009) completing to provide Beads wrapper utilities
-        - Blocks: US3 (Serena), US5 (Installation), US6 (Cleanup), US7 (Documentation) from starting
-        - Can proceed in parallel with: US2 (Command Namespacing) - different files, no conflicts
+        ## Overall Status
+
+        - **Total Tasks**: [count]
+        - **Agent Assignments**: [count]
+        - **Status**: In Progress
+
+        ## Agent Assignments
+
+        ### Agent 1: Phase 0 (T001-T011)
+        - **Status**: Pending
+        - **Tasks**: 11 tasks assigned
+        - **Feature ID**: (to be created by agent)
+
+        [... continue for all agents ...]
         ```
 
-   **Write Story Description to Temp File**:
-   - Generate timestamp: `TIMESTAMP=$(date +%s)` (reuse from Epic creation if same session)
-   - Create temp file path: `/tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md`
-   - Write description using template format:
-     ```markdown
-     # [Story Title]
+   **Step 6.4: Spawn Bead-Creator Agents in Parallel**
 
-     ## Goal
-     [1-2 sentence description from "Why this priority"]
+   For each agent assignment (enforcing max 3-5 concurrent):
 
-     ## Independent Test Criteria
-     **How to verify this story works independently**:
-     [Description from "Independent Test" paragraph in spec.md]
-
-     ## Acceptance Scenarios
-     [Numbered list of Given/When/Then scenarios from spec.md]
-
-     ## Checkpoints (if multi-phase story)
-     - **Checkpoint A**: [Description]
-     - **Checkpoint B**: [Description]
-     [Omit this section if no checkpoints found]
-
-     ## Technical Notes
-     [Architecture decisions, patterns, constraints from plan.md]
-
-     ## Dependencies
-     - Depends on: [Story IDs or phase names]
-     - Blocks: [Story IDs that cannot start until this completes]
-     - Can proceed in parallel with: [Story IDs with no conflicts]
-     ```
-
-   **Execute Beads Command**:
-   - Map priority to Beads priority: P1→1, P2→2, P3→3
-   - Run: `bd create "STORY_TITLE" -t feature -p BEADS_PRIORITY --parent EPIC_ID --body-file /tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md --json`
-   - Capture JSON output
-   - Parse JSON to extract story ID from `.id` field (e.g., "bd-a3f8.1")
-   - Store mapping: US1 → story ID (e.g., {"label": "US1", "id": "bd-a3f8.1", "title": "Beads Task Management Integration"})
-
-   **Clean Up**:
-   - Remove temp file: `rm /tmp/story-${US_NUMBER}-description-${TIMESTAMP}.md`
-
-   **Repeat for All User Stories**:
-   - Process stories in priority order: all P1 stories first, then P2, then P3
-   - Maintain story ID mappings for use in Step 6.4 (Task creation)
-   - Build stories array: `[{"label": "US1", "id": "bd-xxx", "title": "..."}, ...]`
-
-   **Step 6.4: Create Tasks**
-
-   For each task in tasks.md (in execution order T001, T002, T003...):
-
-   **Extract Task Metadata**:
-   - Parse tasks.md for task entries matching pattern: `- [ ] T\d{3} [P?] [Story?] Description`
-   - Extract task ID (e.g., "T001", "T002", "T003")
-   - Extract task title/description (text after markers, before file paths)
-   - Extract [P] marker: Present = parallelizable (true), Absent = sequential (false)
-   - Extract [Story] label (e.g., "[US1]", "[US2]") if present
-   - Extract checkbox status: `[ ]` = pending, `[x]` or `[X]` = complete
-
-   **Map Task to Parent Story**:
-   - IF task has [Story] label (e.g., [US1]):
-     - Look up story ID from stories array built in Step 6.3
-     - Example: [US1] → find story with label "US1" → use its Beads ID as parent
-   - ELSE IF task is in Setup phase (before first user story phase):
-     - Assign to first story in array (typically US1 or setup story)
-   - ELSE IF task is in Foundational phase:
-     - Assign to first story in array (typically US1 or foundational story)
-   - ELSE IF task is in Polish/Final phase:
-     - Assign to last story in array
-   - ELSE:
-     - Analyse task location in tasks.md, determine which phase header it's under
-     - Map phase to story based on section headers
-
-   **Synthesize Task Description** per `contracts/beads-synthesis-templates.md` Task template:
-
-   1. **Title**:
-      - Use format: `# [Task ID] [Task Description from tasks.md]`
-      - Example: `# T020 - Create TEMPORARY markdown-to-Beads migration utility`
-
-   2. **File Paths**:
-      - Parse task description and additional task details for file paths
-      - Look for patterns: `src/...`, `packages/...`, absolute paths, `in FILE_PATH`, `to FILE_PATH`
-      - List all files this task creates, modifies, or deletes
-      - Include CREATE/MODIFY/DELETE annotations
-      - If no explicit paths found in tasks.md, infer from plan.md structure section
-      - Example:
-        ```
-        ## File Paths
-        - techsift/migrate-tasks-to-beads.ts (CREATE - temporary, will be deleted in T023)
-        - .beads/issues.jsonl (MODIFY - add Epic/Story/Task entries)
-        ```
-
-   3. **Acceptance Criteria**:
-      - Extract explicit criteria from tasks.md task description
-      - Look for bullet points after task title, "must", "should", "verify" keywords
-      - If no explicit criteria in tasks.md: Infer from plan.md task details
-      - Generate specific, testable criteria based on task action verbs:
-        - "Create" → File exists, contains expected structure
-        - "Implement" → Functionality works, tests pass
-        - "Update" → Changes applied correctly, no regressions
-        - "Migrate" → Source → destination mapping complete, validation passes
-      - Each criterion should be verifiable via command, test, or observation
-      - Example:
-        ```
-        ## Acceptance Criteria
-        - Migration utility reads markdown tasks.md and extracts Epic/Story/Task data
-        - Epic description synthesized per Epic template (overview, implementation strategy, dependency flow, story rules, scope)
-        - Story description synthesized per Story template (goal, independent test criteria, acceptance scenarios, checkpoints, technical notes, dependencies)
-        - Task description synthesized per Task template (file paths, acceptance criteria, task-specific notes, dependencies, testing instructions)
-        - Utility validates markdown structure before migration (no parsing errors)
-        - Utility outputs validation report showing completeness percentage
-        ```
-
-   4. **Task-Specific Notes**:
-      - Scan task description for special markers:
-        - **IMPORTANT**: Critical information for implementation
-        - **CRITICAL**: Blocking issues or requirements
-        - **WARNING**: Potential pitfalls or gotchas
-        - **TEMPORARY**: Scaffolding code that will be deleted later
-        - **NOTE**: Additional context or explanations
-      - Preserve exact wording from tasks.md
-      - Include marker type and description
-      - Example:
-        ```
-        ## Task-Specific Notes
-        **IMPORTANT**: This is TEMPORARY SCAFFOLDING created in techsift root (not ai-software-dev-workbench) to avoid polluting workbench git history. Will be deleted in T023 after migration verified.
-
-        **CRITICAL**: Ensure FULL CONTEXT PARITY - Epic/Story/Task descriptions must contain ALL project management context from markdown so developers don't need to reference source documents during implementation.
-        ```
-
-   5. **Dependencies**:
-      - Analyse task relationships from tasks.md:
-
-      **Depends On** (tasks that MUST complete before this task):
-      - Look for explicit "Depends on: T001" or "(depends on T002)" in task description
-      - If task is NOT marked [P] and is NOT first in phase: Depends on previous task in same phase
-      - If task mentions "after T001" or "requires T002": Add dependency
-      - Example: T002 depends on T001 if T001 must complete first
-
-      **Blocks** (tasks that CANNOT start until this task completes):
-      - Reverse lookup: Which tasks list this task as dependency?
-      - If this task creates infrastructure needed by later tasks: List those tasks
-      - Example: T001 blocks T002 if T002 depends on T001
-
-      **Parallel With** (tasks that CAN run simultaneously):
-      - IF task is marked [P]: Analyse file path conflicts with other [P] tasks
-      - File conflict detection algorithm:
-        1. Extract all file paths from current task description (from tasks.md "File Paths" section if present, or inline file references)
-        2. For each other [P] task in same phase:
-           - Extract file paths from that task's description
-           - Compare file paths between current task and candidate parallel task
-           - IF any file path overlaps: CONFLICT - cannot run in parallel
-           - IF no file path overlaps: CAN run in parallel
-        3. Generate "Parallel with" list including only non-conflicting [P] tasks
-      - File path parsing strategy:
-        - Look for patterns: `src/...`, `packages/...`, absolute paths
-        - Look for keywords: "in FILE", "to FILE", "at FILE", "FILE_PATH"
-        - Include both CREATE and MODIFY file operations (DELETE typically safe for parallel)
-        - Normalize paths for comparison (remove leading ./, resolve relative paths)
-      - Tasks in different phases typically cannot run in parallel (different dependency chains)
-      - Example: T005 [P] creates `src/utils/beads.ts`, T006 [P] creates `src/utils/mapper.ts` → Can run in parallel (different files)
-      - Example: T007 [P] modifies `package.json`, T008 [P] modifies `package.json` → CANNOT run in parallel (same file conflict)
-
-      - Format dependencies as:
-        ```
-        ## Dependencies
-        - Depends on: T007, T008, T009 (Beads wrapper utilities must exist)
-        - Blocks: T021 (migration execution), T022 (verification), T023 (deletion)
-        - Parallel with: None (sequential migration workflow)
-        ```
-
-   6. **Testing Instructions** (post-completion verification):
-      - Generate verification steps based on task type:
-
-      **For "Create" tasks** (new files):
-      - Verify file exists at expected path
-      - Verify file contains expected structure/exports
-      - Run linter/type checker to verify no errors
-      - Example: `ls -l FILE_PATH`, `npx tsc --noEmit FILE_PATH`
-
-      **For "Implement" tasks** (functionality):
-      - Run relevant tests (unit, integration)
-      - Verify functionality works via manual test or example usage
-      - Check for error handling edge cases
-      - Example: `npm test -- FILE_PATH.test.ts`, manual workflow test
-
-      **For "Update" tasks** (modifications):
-      - Verify changes applied correctly (grep, diff)
-      - Run regression tests to ensure no breakage
-      - Verify backward compatibility if needed
-      - Example: `git diff FILE_PATH`, `npm test`
-
-      **For "Migrate" tasks** (data transformations):
-      - Run migration with --dry-run flag first
-      - Verify source → destination mapping completeness
-      - Generate validation report
-      - Verify rollback procedure works
-      - Example: `node script.ts --dry-run`, compare counts
-
-      - Format testing instructions with numbered steps and expected output:
-        ```
-        ## Testing Instructions (post-completion)
-        Run migration utility with `node techsift/migrate-tasks-to-beads.ts --dry-run` and verify:
-        1. Console output shows Epic/Story/Task synthesis in progress
-        2. Validation report displays 100% completeness for all sections
-        3. Sample Epic description matches template structure
-        4. Sample Story description includes checkpoints and dependencies
-        5. Sample Task description includes file paths and testing instructions
-        ```
-
-   **Write Task Description to Temp File**:
-   - Generate timestamp: `TIMESTAMP=$(date +%s)` (reuse from Epic/Story creation if same session)
-   - Create temp file path: `/tmp/task-${TASK_ID}-description-${TIMESTAMP}.md`
-   - Write description using template format:
-     ```markdown
-     # [Task ID] [Task Title]
-
-     ## File Paths
-     - [File path 1] (CREATE/MODIFY/DELETE annotation)
-     - [File path 2] (CREATE/MODIFY/DELETE annotation)
-
-     ## Acceptance Criteria
-     - [Specific testable criterion 1]
-     - [Specific testable criterion 2]
-
-     ## Task-Specific Notes
-     **IMPORTANT**: [Critical information]
-     **TEMPORARY**: [Scaffolding notes]
-     [Other markers as found]
-
-     ## Dependencies
-     - Depends on: [Task IDs that must complete before this task]
-     - Blocks: [Task IDs that cannot start until this task completes]
-     - Parallel with: [Task IDs that can run simultaneously]
-
-     ## Testing Instructions (post-completion)
-     [Numbered verification steps with expected output]
-     1. [First verification step]
-     2. [Second verification step]
-     ```
-
-   **Execute Beads Command**:
-   - Run: `bd create "TASK_TITLE" -t task -p 2 --parent STORY_ID --body-file /tmp/task-${TASK_ID}-description-${TIMESTAMP}.md --label ${TASK_ID} --json`
-   - Note: The --label ${TASK_ID} flag (e.g., --label T001) provides a human-readable signpost during planning; labels are searchable via 'bd list --label T001'
-   - Capture JSON output
-   - Parse JSON to extract Beads task ID from `.id` field (e.g., "bd-abc")
-   - Store for dependency tracking: {"task_id": "${TASK_ID}", "beads_id": "bd-abc", "label": "${TASK_ID}"}
-
-   **Clean Up**:
-   - Remove temp file: `rm /tmp/task-${TASK_ID}-description-${TIMESTAMP}.md`
-
-   **Repeat for All Tasks**:
-   - Process tasks in execution order: T001, T002, T003... (as they appear in tasks.md)
-   - Maintain task tracking for dependency generation: `[{"task_id": "T001", "beads_id": "bd-abc", "label": "T001", "story": "US1", "parallel": true/false}, ...]`
-   - Track parallel markers for dependency generation in Step 6.5
-
-   **Step 6.5: Add Dependencies**
-
-   **CRITICAL - Complete Dependency Creation Protocol**:
-   - Create **ALL** dependencies documented in task descriptions - do not filter, skip, or optimise
-   - Do not create only "critical" or "important" dependencies - create **EVERY** dependency relationship
-   - Every "Depends on", "Blocks", or sequential relationship mentioned in task descriptions MUST exist in Beads
-   - The complete dependency graph must match task descriptions exactly
-   - Verification: Final dependency count should reflect ALL relationships, not a subset
-
-   For each task in task tracking array (built in Step 6.4):
-
-   **Dependency Analysis Strategy**:
-
-   1. **Explicit Dependencies** (highest priority):
-      - Scan task description (from tasks.md) for explicit dependency markers:
-        - "Depends on: T001" or "Depends on: T001, T002"
-        - "(depends on T003)" or "requires T004"
-        - "after T005 completes" or "blocked by T006"
-      - Extract task IDs from these markers (e.g., "T001" → lookup Beads ID "bd-abc")
-      - Add dependency: `bd dep add CURRENT_TASK_BEADS_ID DEPENDENCY_BEADS_ID`
-
-   2. **Sequential Dependencies** (within same phase):
-      - IF task is NOT marked [P] (parallel):
-        - AND task is NOT first in its phase:
-        - AND previous task is in same phase (same parent story):
-        - THEN: Task depends on previous task in execution order
-        - Example: T015 (no [P]) depends on T014 (previous task in same phase)
-      - IF task IS marked [P]:
-        - NO automatic sequential dependency (can run in parallel with other [P] tasks)
-      - Exception: IF explicit dependency exists, it OVERRIDES automatic sequential rule
-
-   3. **Cross-Phase Dependencies** (blocking prerequisites):
-      - IF task mentions "Phase X must complete" or "after Foundational":
-        - Find all tasks in that phase
-        - Add dependencies on ALL tasks in prerequisite phase
-      - IF task mentions specific user story completion:
-        - Example: "US1 must complete before US3" → ALL US3 tasks depend on ALL US1 tasks
-        - Find all tasks with that story label, add dependencies
-
-   **Dependency Execution**:
-
-   1. Build **COMPLETE** dependency list (no filtering, no optimisation):
+   1. **Spawn bead-creator agent** using Task tool:
       ```
-      dependencies = []
+      Call Task tool with:
+        subagent_type: "bead-creator"
+        description: "Create beads for [story_id] [task_range]"
+        prompt: "
+          You are creating Beads (Epic/Story/Tasks) for a feature specification migration.
 
-      For each task in task_mapping_array:
-        child_task_id = task.task_id  (e.g., "T015")
-        child_beads_id = task.beads_id  (e.g., "bd-def")
-        child_story = task.story  (e.g., "US1")
-        child_parallel = task.parallel  (true/false)
+          **Assignment**:
+          - Story/Phase: [story_id]
+          - Task Range: [task_range]
+          - Epic ID (parent): [epic-id]
 
-        # Process ALL explicit dependencies (not just "critical" ones)
-        task_description = [read from tasks.md for this task_id]
-        explicit_deps = extract_explicit_dependencies(task_description)
+          **Context Files** (read ALL before proceeding):
+          - $FEATURE_DIR/tasks.md (source of all task data)
+          - $FEATURE_DIR/spec.md (user stories, acceptance scenarios)
+          - $FEATURE_DIR/plan.md (technical notes, architecture)
+          - $FEATURE_DIR/contracts/beads-synthesis-templates.md (description templates)
+          - $FEATURE_DIR/contracts/beads-cli.md (command reference - prevent reasoning overhead)
 
-        For each dep_task_id in explicit_deps:
-          parent_beads_id = lookup_beads_id(dep_task_id)
-          dependencies.append({
-            "child": child_beads_id,
-            "parent": parent_beads_id,
-            "type": "explicit"
-          })
+          **Your Task**:
+          1. Identify if this is a phase (Setup, Foundational) or user story (US1, US2, etc.)
+          2. Create Feature (Story) for this grouping:
+             - Synthesize description per Story template in beads-synthesis-templates.md
+             - Use Epic ID as parent
+             - Map priority: P1→1, P2→2, P3→3
+          3. Create Tasks for assigned range:
+             - Extract task metadata from tasks.md (ID, title, [P] marker, checkbox status)
+             - Synthesize description per Task template in beads-synthesis-templates.md
+             - Set correct status: [x]→closed, [ ]→open
+             - Add label with task number: --label T001
+             - Use Feature ID as parent
+          4. Create dependencies:
+             - Parse explicit dependencies from task descriptions
+             - Create sequential dependencies for non-[P] tasks
+          5. Report results as JSON:
+             {
+               \"agent_id\": \"bead-creator-us1a\",
+               \"assignment\": \"US1 Phase A (T012-T021c)\",
+               \"feature_id\": \"techsift-5bb.2\",
+               \"tasks_created\": [
+                 {\"task_number\": \"T012\", \"bead_id\": \"techsift-5bb.2.1\", \"status\": \"created\"},
+                 ...
+               ],
+               \"failures\": [
+                 {\"task_number\": \"T015\", \"error\": \"...\", \"suggested_action\": \"...\"},
+                 ...
+               ]
+             }
 
-        # Process ALL sequential dependencies (if not parallel and not first in phase)
-        If NOT child_parallel:
-          previous_task = find_previous_task_in_same_phase(child_task_id, child_story)
-          If previous_task exists:
-            parent_beads_id = previous_task.beads_id
-            dependencies.append({
-              "child": child_beads_id,
-              "parent": parent_beads_id,
-              "type": "sequential"
-            })
+          **CRITICAL**:
+          - Create ALL dependencies documented in task descriptions (no filtering)
+          - Ensure FULL CONTEXT synthesis (descriptions must be self-contained)
+          - Use beads-cli.md for exact command syntax (do not reason about commands)
+          - Run 'bd sync' at session end before returning
+        "
       ```
 
-   2. Execute **ALL** dependency commands (create every dependency, do not skip any):
+   2. **Batching Strategy**:
+      - Spawn first batch of 3-5 agents
+      - Wait for batch completion
+      - Spawn next batch
+      - Repeat until all assignments processed
+
+   3. **Collect agent outputs** as they complete
+
+   **Step 6.5: Collect Agent Results**
+
+   After all agents complete:
+
+   1. **Parse agent outputs**:
+      - Extract JSON result from each agent's final response
+      - Parse feature_id, tasks_created, failures
+
+   2. **Update migration-tracking.md**:
+      ```markdown
+      ## Agent Results
+
+      ### Agent 1: Phase 0 (T001-T011)
+      - **Status**: ✅ COMPLETE
+      - **Feature ID**: techsift-5bb.1
+      - **Tasks**: 11/11 created
+      - **Failures**: None
+
+      ### Agent 2: US1 Phase A (T012-T021c)
+      - **Status**: ⚠️  PARTIAL
+      - **Feature ID**: techsift-5bb.2
+      - **Tasks**: 7/10 created
+      - **Failures**:
+        - T015: Failed to parse file paths from description
+        - T018: Dependency resolution error (T017 not found)
+        - T020: Description synthesis timeout
+
+      ## Failures Requiring Action
+
+      1. **T015** - Failed to parse file paths
+         - Agent: bead-creator-us1a
+         - Error: Failed to parse file paths from description
+         - Action: Review task description format in tasks.md
+
+      [... continue for all failures ...]
+      ```
+
+   3. **Calculate overall status**:
+      - Total tasks assigned: [count]
+      - Successfully created: [count]
+      - Failed: [count]
+      - Completion rate: [percentage]%
+
+   **Step 6.6: Attempt Failure Remediation**
+
+   For each failure in migration-tracking.md:
+
+   1. **Analyse failure type**:
+      - Dependency resolution errors → Create missing dependencies first
+      - Parsing errors → Fix task description format
+      - Timeout/synthesis errors → Retry with adjusted prompt
+
+   2. **Attempt fixes with retry limit**:
+      ```
+      max_attempts = 3
+      for failure in failures:
+        attempt_count = 0
+        while attempt_count < max_attempts:
+          try:
+            # Re-spawn bead-creator agent for this specific task
+            # Or manually create/fix using bd commands
+            fix_result = attempt_fix(failure)
+            if fix_result.success:
+              mark_as_success(failure)
+              update_tracking_file(failure, "FIXED")
+              break
+          except error:
+            attempt_count++
+            log_attempt(failure, error)
+
+        if attempt_count >= max_attempts:
+          escalate_to_user(failure)
+      ```
+
+   3. **Update tracking file** after each fix attempt
+
+   4. **If all fixes successful**: Proceed to Step 6.7
+   5. **If failures persist**: Report to user and ask for guidance
+
+   **Step 6.7: Call Tasks-Audit Agent**
+
+   Spawn tasks-audit agent to verify migration accuracy:
+
+   1. **Spawn tasks-audit agent** using Task tool:
+      ```
+      Call Task tool with:
+        subagent_type: "tasks-audit"
+        description: "Audit Beads migration completeness"
+        prompt: "
+          You are auditing a Beads migration for completeness and accuracy.
+
+          **Context**:
+          - Epic ID: [epic-id]
+          - Source: $FEATURE_DIR/tasks.md (source of truth)
+          - Verification checklist: $FEATURE_DIR/contracts/beads-synthesis-templates.md
+
+          **Your Task**:
+          1. Load all beads for this Epic: 'bd list --json'
+          2. Verify Epic against checklist (see beads-synthesis-templates.md Epic section)
+          3. Verify each Feature (Story) against checklist
+          4. Verify each Task against checklist
+          5. Generate audit report as JSON:
+             {
+               \"epic\": {
+                 \"id\": \"techsift-5bb\",
+                 \"completeness_score\": \"85%\",
+                 \"issues\": [
+                   {\"type\": \"missing_content\", \"field\": \"overview\", \"severity\": \"high\", \"fix\": \"...\"},
+                   ...
+                 ]
+               },
+               \"features\": [...],
+               \"tasks\": [...],
+               \"overall_completeness\": \"88%\",
+               \"total_issues\": 47
+             }
+
+          **Save audit report** to: $FEATURE_DIR/migration-audit-report.json
+
+          **CRITICAL**:
+          - Check EVERY field in synthesis templates
+          - Report ALL issues (not just critical ones)
+          - Provide specific fix instructions for each issue
+        "
+      ```
+
+   2. **Wait for audit completion**
+
+   3. **Parse audit report**:
+      - Read `$FEATURE_DIR/migration-audit-report.json`
+      - Extract all issues
+
+   **Step 6.8: Apply Audit Fixes in Batches**
+
+   Process audit issues in batches of 10:
+
+   1. **Create fix checklist** in `$FEATURE_DIR/migration-audit-fixes.md`:
+      ```markdown
+      # Migration Audit Fixes
+
+      **Total Issues**: 47
+      **Completed**: 0
+      **Remaining**: 47
+
+      ## Batch 1 (Issues 1-10)
+
+      - [ ] Fix 1: Epic - Add complete overview from spec.md
+      - [ ] Fix 2: Epic - Add missing scope metrics
+      - [ ] Fix 3: US1 - Add acceptance scenarios 4-6
+      [... continue for batch 1 ...]
+
+      ## Batch 2 (Issues 11-20)
+
+      - [ ] Fix 11: ...
+      [... continue ...]
+      ```
+
+   2. **Process each batch**:
+      ```
+      batches = split_into_batches(issues, batch_size=10)
+
+      for batch in batches:
+        for fix in batch:
+          # Apply fix using bd update commands
+          apply_fix(fix)
+          
+          # Mark complete in checklist
+          mark_complete_in_checklist(fix)
+
+        # Save checklist after each batch
+        save_checklist()
+
+        # Check context usage
+        if context_usage > 150k_tokens:
+          prompt_user("Context approaching limit. Continue or pause?")
+      ```
+
+   3. **Fix types and commands**:
+      - **Missing/incorrect description**: 
+        - Write fixed description to temp file
+        - `bd update {id} --body-file /tmp/fixed-desc.md`
+      - **Missing labels**: 
+        - `bd update {id} --add-label T001`
+      - **Missing dependencies**: 
+        - `bd dep add {child-id} {parent-id}`
+      - **Wrong status**: 
+        - `bd update {id} --status {correct-status}`
+
+   4. **After all fixes applied**:
+      - Run `bd sync` to commit changes
+      - Verify checklist is 100% complete
+
+   **Step 6.9: Clean Up and Finalize**
+
+   1. **Archive tracking files** (optional):
+      - Move to `$FEATURE_DIR/.migration-archive/`
+      - Or delete if user prefers clean state
+
+   2. **Run final verification**:
       ```bash
-      # Create every dependency in the list - no filtering
-      for dep in dependencies:
-        bd dep add ${dep.child} ${dep.parent}
+      # Verify expected count
+      bd list --json | jq 'length'
+      
+      # Check for any issues
+      bd doctor
+      
+      # Ensure synced to git
+      bd sync
       ```
 
-   **Example Dependency Scenarios**:
+   3. **Generate completion report**:
+      ```markdown
+      # Migration Complete
 
-   **Scenario 1: Explicit Dependency**
-   ```markdown
-   - [ ] T022 [US1] Create migration utility (depends on T007-T009)
-   ```
-   Result:
-   - `bd dep add bd-xxx bd-abc` (T022 depends on T007)
-   - `bd dep add bd-xxx bd-def` (T022 depends on T008)
-   - `bd dep add bd-xxx bd-ghi` (T022 depends on T009)
+      **Feature**: [feature-name]
+      **Date**: [date]
+      **Duration**: [duration]
 
-   **Scenario 2: Sequential Dependencies (no [P] marker)**
-   ```markdown
-   - [ ] T014 [US1] Create setup script
-   - [ ] T015 [US1] Update wb-tasks.md to generate Beads structure
-   - [ ] T016 [US1] Implement Epic creation logic
-   ```
-   Result:
-   - T015 depends on T014 (sequential in same phase)
-   - T016 depends on T015 (sequential in same phase)
-   - Commands: `bd dep add bd-T015 bd-T014`, `bd dep add bd-T016 bd-T015`
+      ## Results
 
-   **Scenario 3: Parallel Tasks (with [P] marker)**
-   ```markdown
-   - [ ] T007 [P] [US1] Create Beads wrapper utility
-   - [ ] T008 [P] [US1] Create SpecKit-to-Beads mapper
-   - [ ] T009 [P] [US1] Implement error handling wrapper
-   ```
-   Result:
-   - NO dependencies between T007, T008, T009 (all marked [P])
-   - These tasks can run simultaneously
+      - **Epic**: ✅ Created with full context synthesis
+      - **Features**: ✅ [count] created
+      - **Tasks**: ✅ [count] created with labels and dependencies
+      - **Completeness**: 100% (all audit issues resolved)
 
-   **Scenario 4: Mixed Sequential and Parallel**
-   ```markdown
-   - [ ] T012 [P] [US1] Rename command file (can run in parallel)
-   - [ ] T013 [US1] Create symlink (depends on T012 completing)
-   ```
-   Result:
-   - T012 has NO sequential dependency (marked [P])
-   - T013 depends on T012 (sequential, not marked [P], follows T012)
-   - Command: `bd dep add bd-T013 bd-T012`
+      ## Beads Database
 
-   **Dependency Validation**:
-   - Verify no circular dependencies (task A → task B → task A)
-   - Verify all referenced task IDs exist in task tracking array
-   - Warn if [P] task has sequential dependency (likely incorrect [P] marker)
-   - **CRITICAL**: Verify dependency count matches expected relationships from task descriptions
-     - Count expected: ALL explicit dependencies + ALL sequential dependencies
-     - If counts don't match, investigate and create missing dependencies
-   - Report total dependencies added: "Added X dependencies (Y explicit, Z sequential)"
-   - **Do NOT report "critical dependencies" or "most important" - ALL dependencies must be created**
+      - **Total Issues**: [count] (1 epic + N features + M tasks)
+      - **Status**: Synced to git
+      - **Ready**: True
 
-   **Step 6.6: Sync to Remote**
-   - Execute: `bd sync` to commit Beads changes to git
-   - Verify: Run `git status` to ensure clean working directory
-   - This ensures all Beads structure changes (Epic, Stories, Tasks with T001 labels, Dependencies) are synchronized to the remote repository
+      ## Next Steps
 
-   **Step 6.7: Beads Verification and Resolution Gate**
+      - Begin implementation with /wb-implement {bead-id}
+      - Use labels for reference: bd list --label-any T001
+      - View ready tasks: bd ready
+      ```
 
-   After Beads structure is created and synced, present verification commands and work with user to ensure Beads structure is correct:
+   4. **Present verification commands to user**:
+      ```
+      Beads structure has been created successfully via agent orchestration!
 
-   ```
-   Beads structure has been created successfully! Here are commands to verify it:
+      **Migration Summary**:
+      - Epic: [epic-id]
+      - Features: [count] created
+      - Tasks: [count] created with labels (T001, T002, etc.)
+      - Dependencies: All relationships created
+      - Audit: 100% completeness verified
 
-   **View all Beads issues**:
-   bd list
+      **Verification Commands**:
+      - View all: bd list
+      - View Epic: bd show [epic-id]
+      - View ready tasks: bd ready
+      - View by label: bd list --label-any T001
 
-   **View the Epic details**:
-   bd show <epic-id>
+      Would you like me to delete tasks.md? (Y/n)
+      ```
 
-   **View a specific Story**:
-   bd show <story-id>
+   5. **Handle tasks.md deletion** (same as current Step 6.7 logic)
 
-   **View a specific Task**:
-   bd show <task-id>
-
-   **View tasks ready to work (no blockers)**:
-   bd ready
-
-   **View dependency graph**:
-   bd list --status=open
-
-   Please review the Beads structure using these commands. I can help you:
-   - Fix any issues with Epic/Story/Task descriptions
-   - Adjust dependencies between tasks
-   - Update priorities or labels
-   - Add missing tasks or stories
-
-   Let me know if you'd like me to make any changes, or confirm the structure is correct.
-   ```
-
-   **Iterative Resolution Process**:
-
-   - **If user identifies issues or requests changes**:
-     1. Listen to the specific problem (e.g., "T005 description is missing file paths", "T010 should depend on T009")
-     2. Determine the appropriate Beads command to fix it:
-        - Missing/incorrect description: `bd update <beads-id> --body-file /tmp/updated-description.md`
-        - Wrong dependency: `bd dep add <child-id> <parent-id>` or `bd dep remove <child-id> <parent-id>`
-        - Wrong priority: `bd update <beads-id> --priority <new-priority>`
-        - Wrong parent: Cannot change parent directly; need to close old task and recreate under correct parent
-        - Missing task: Create new task with `bd create` and add to appropriate story
-     3. Execute the fix
-     4. Present the updated verification commands again
-     5. Repeat until user is satisfied
-
-   - **If user confirms structure is correct** (e.g., "looks good", "structure is correct", "proceed", "all good"):
-     - Ask user about tasks.md deletion:
-       ```
-       The Beads structure is now verified. Would you like me to delete tasks.md?
-
-       - tasks.md was used to generate the Beads structure and is no longer needed
-       - The Beads database (.beads/) now contains all task information
-       - Keeping tasks.md: May be useful for reference or comparison
-       - Deleting tasks.md: Cleaner repo, single source of truth in Beads
-
-       Delete tasks.md? (Y/n)
-       ```
-     - If user approves deletion (e.g., "yes", "y", "delete it"):
-       - Delete tasks.md file: `bash -c "rm '$FEATURE_DIR/tasks.md'"`
-       - Verify deletion succeeded: `bash -c "if [ ! -f '$FEATURE_DIR/tasks.md' ]; then echo 'Deletion confirmed'; else echo 'Deletion failed'; exit 1; fi"`
-       - Confirm to user: "tasks.md has been deleted. The Beads database is now the single source of truth for task management."
-     - If user declines deletion (e.g., "no", "n", "keep it"):
-       - Acknowledge: "tasks.md will be kept for reference alongside the Beads database."
-     - Execute: `bd sync` to commit all changes made during verification
-     - Proceed to Step 7 (Report)
-
-   - **If user wants to exit before verification** (e.g., "stop", "I'll verify later"):
-     - Exit gracefully with message: "No problem. The Beads structure has been created and synced. You can verify it later using the commands above, and re-run this command if you need to make changes."
-
-   **IMPORTANT**:
-   - Do NOT proceed to Step 7 until user explicitly confirms the Beads structure is correct
-   - Be prepared to iterate multiple times fixing issues
-   - tasks.md deletion is optional and controlled by user choice after verification
+   6. **Run final bd sync** and proceed to Step 7 (Report)
 
 7. **Report**: Output workflow summary:
    - **tasks.md Status**:
