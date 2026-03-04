@@ -3,7 +3,7 @@
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-**Note**: This template is filled in by the `/plan` command. See `speckit/templates/commands/plan.md` for the execution workflow.
+**Note**: This template is filled in by the `/wb-plan` command. See `speckit/templates/commands/wb-plan.md` for the execution workflow.
 
 ## Summary
 
@@ -39,12 +39,12 @@
 
 ```text
 specs/[###-feature]/
-├── plan.md              # This file (/plan command output)
-├── research.md          # Phase 0 output (/plan command)
-├── data-model.md        # Phase 1 output (/plan command)
-├── quickstart.md        # Phase 1 output (/plan command)
-├── contracts/           # Phase 1 output (/plan command)
-└── tasks.md             # Phase 2 output (/tasks command - NOT created by /plan)
+├── plan.md              # This file (/wb-plan command output)
+├── research.md          # Phase 0 output (/wb-plan command)
+├── data-model.md        # Phase 1 output (/wb-plan command)
+├── quickstart.md        # Phase 1 output (/wb-plan command)
+├── contracts/           # Phase 1 output (/wb-plan command)
+└── tasks.md             # Phase 2 output (/wb-tasks command - NOT created by /wb-plan)
 ```
 
 ### Source Code (repository root)
